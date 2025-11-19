@@ -15,7 +15,7 @@ const (
 )
 
 func authorize(w http.ResponseWriter, r *http.Request) {
-	content, err := os.ReadFile("templates/permissions.txt")
+	content, err := os.ReadFile("templates/permissions.template")
 	if err != nil {
 		http.Error(w, fmt.Sprintf("error in opening template permissions: %s", err), 500)
 	}
@@ -45,7 +45,7 @@ func authorize(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /authorize", authorize)
+	mux.HandleFunc("GET /auth", authorize)
 	server := &http.Server{
 		Addr:         fmt.Sprintf("%s:%d", HOST, PORT),
 		ReadTimeout:  10 * time.Second,
