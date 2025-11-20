@@ -3,9 +3,11 @@ package main
 import (
 	"fmt"
 	"html/template"
+	"io"
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -14,38 +16,50 @@ const (
 	PORT = 8081
 )
 
-func authorize(w http.ResponseWriter, r *http.Request) {
-	content, err := os.ReadFile("templates/permissions.template")
+func parseExecuteTemplate(templateFile string, w io.Writer, data any) error {
+	file, err := os.ReadFile(templateFile)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("error in opening template permissions: %s", err), 500)
+		log.Printf("[ERROR] error opening template file")
+		return err
 	}
 
-	tmpl, err := template.New("permissions_template").Parse(string(content))
+	templateFilename := strings.Split(templateFile, ".")
+	tmpl, err := template.New(templateFilename[0] + ".html").Parse(string(file))
 	if err != nil {
-		http.Error(w, fmt.Sprintf("error parsing template: %s", err), 500)
-	}
-
-	data := struct {
-		Client      string
-		Permissions []string
-	}{
-		Client: "OAuth 2.0 Client",
-		Permissions: []string{
-			"View files located at Go Server",
-			"Edit files located at Go Server",
-			"Delete files located at Go Server",
-		},
+		log.Printf("[ERROR] error parsing template file")
+		return err
 	}
 
 	err = tmpl.Execute(w, data)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("error executing template: %s", err), 500)
+		log.Printf("[ERROR] error parsing template file")
+		return err
 	}
+
+	return nil
+}
+
+func registerPage(w http.ResponseWriter, r *http.Request) {
+	parseExecuteTemplate("templates/register.tmpl", w, nil)
+}
+
+func loginPage(w http.ResponseWriter, r *http.Request) {
+	parseExecuteTemplate("templates/login.tmpl", w, nil)
+}
+
+func consentPage(w http.ResponseWriter, r *http.Request) {
+	// extract client data and scopes
+	parseExecuteTemplate("templates/permissions.tmpl", w, nil)
 }
 
 func main() {
+
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /auth", authorize)
+	mux.Handle("/images/", http.StripPrefix("/images/", http.FileServer(http.Dir("images"))))
+	mux.HandleFunc("GET /register-page", registerPage)
+	mux.HandleFunc("GET /login-page", loginPage)
+	mux.HandleFunc("GET /consent-page", consentPage)
+
 	server := &http.Server{
 		Addr:         fmt.Sprintf("%s:%d", HOST, PORT),
 		ReadTimeout:  10 * time.Second,
