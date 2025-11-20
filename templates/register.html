@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Register — Example</title>
+    <!-- Google font for that clean Material/Google look -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #f6f7f9;
+        --card: #ffffff;
+        --muted: #6b7280;
+        --accent: #1a73e8; /* Google blue */
+        --danger: #d93025;
+        --glass: rgba(255, 255, 255, 0.6);
+        --radius: 12px;
+        --shadow: 0 6px 24px rgba(15, 23, 42, 0.08);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial;
+        background: linear-gradient(180deg, var(--bg), #eef2ff 60%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 24px;
+        color: #0f172a;
+      }
+
+      .container {
+        width: 100%;
+        max-width: 420px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+
+      .title {
+        font-size: 20px;
+        font-weight: 600;
+        margin: 0;
+      }
+      .subtitle {
+        font-size: 13px;
+        color: var(--muted);
+        margin-top: 2px;
+      }
+
+      .card {
+        background: var(--card);
+        border-radius: var(--radius);
+        padding: 28px;
+        box-shadow: var(--shadow);
+        border: 1px solid rgba(15, 23, 42, 0.04);
+      }
+
+      form {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      label {
+        font-size: 12px;
+        color: var(--muted);
+        display: block;
+        margin-bottom: 6px;
+      }
+
+      .input-wrap {
+        display: flex;
+        flex-direction: column;
+      }
+
+      input[type="email"],
+      input[type="password"],
+      input[type="text"] {
+        width: 100%;
+        padding: 12px 14px;
+        border-radius: 8px;
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        font-size: 15px;
+        outline: none;
+        transition: box-shadow 0.15s, border-color 0.12s, transform 0.08s;
+        background: linear-gradient(
+          180deg,
+          rgba(255, 255, 255, 0.9),
+          rgba(250, 250, 250, 0.9)
+        );
+      }
+      input:focus {
+        box-shadow: 0 6px 18px rgba(26, 115, 232, 0.08);
+        border-color: var(--accent);
+      }
+
+      .helper {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .error {
+        font-size: 12px;
+        color: var(--danger);
+        margin-top: 6px;
+      }
+
+      .pw-row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+      .pw-toggle {
+        background: transparent;
+        border: none;
+        padding: 8px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 13px;
+        color: var(--accent);
+      }
+
+      .actions {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 6px;
+      }
+
+      .btn {
+        padding: 12px 14px;
+        border-radius: 10px;
+        border: none;
+        font-weight: 600;
+        font-size: 15px;
+        cursor: pointer;
+      }
+      .btn-primary {
+        background: var(--accent);
+        color: white;
+        box-shadow: 0 6px 18px rgba(26, 115, 232, 0.12);
+      }
+      .btn-primary[disabled] {
+        opacity: 0.55;
+        cursor: not-allowed;
+        box-shadow: none;
+      }
+
+      .small {
+        font-size: 13px;
+        color: var(--muted);
+        text-align: center;
+        margin-top: 10px;
+      }
+
+      .divider {
+        height: 1px;
+        background: linear-gradient(
+          90deg,
+          rgba(15, 23, 42, 0.02),
+          rgba(15, 23, 42, 0.04)
+        );
+        margin: 12px 0;
+        border-radius: 2px;
+      }
+
+      /* subtle responsive */
+      @media (max-width: 420px) {
+        .container {
+          padding: 0 6px;
+        }
+        .card {
+          padding: 20px;
+        }
+      }
+
+      /* focus styles for accessibility */
+      input:focus-visible {
+        outline: 3px solid rgba(26, 115, 232, 0.12);
+      }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <div class="brand">
+        <img src="oauth20.png" height="40" />
+        <div>
+          <h1 class="title">Create your account with OAuth 2.0</h1>
+          <div class="subtitle">Get started with your new account</div>
+        </div>
+      </div>
+
+      <section class="card" aria-labelledby="reg-heading">
+        <h2 id="reg-heading" style="font-size: 16px; margin: 0 0 8px 0">
+          Register
+        </h2>
+        <form id="regForm" novalidate>
+          <div class="input-wrap">
+            <label for="email">Email</label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              autocomplete="email"
+              required
+              aria-required="true"
+              placeholder="you@example.com"
+            />
+            <div id="emailHelp" class="helper">
+              Use your work or personal email.
+            </div>
+            <div
+              id="emailError"
+              class="error"
+              role="alert"
+              aria-live="polite"
+              style="display: none"
+            ></div>
+          </div>
+
+          <div class="input-wrap">
+            <label for="password">Password</label>
+            <div class="pw-row">
+              <input
+                id="password"
+                name="password"
+                type="password"
+                required
+                minlength="8"
+                aria-required="true"
+                placeholder="At least 8 characters"
+              />
+              <button
+                type="button"
+                id="togglePw"
+                class="pw-toggle"
+                aria-pressed="false"
+              >
+                Show
+              </button>
+            </div>
+            <div id="pwHelp" class="helper">
+              Must be at least 8 characters. Avoid common words.
+            </div>
+            <div
+              id="pwError"
+              class="error"
+              role="alert"
+              aria-live="polite"
+              style="display: none"
+            ></div>
+          </div>
+
+          <div class="input-wrap">
+            <label for="confirm">Confirm password</label>
+            <input
+              id="confirm"
+              name="confirm"
+              type="password"
+              required
+              aria-required="true"
+              placeholder="Re-enter your password"
+            />
+            <div
+              id="confirmError"
+              class="error"
+              role="alert"
+              aria-live="polite"
+              style="display: none"
+            ></div>
+          </div>
+
+          <div class="actions">
+            <button
+              id="registerBtn"
+              class="btn btn-primary"
+              type="submit"
+              disabled
+            >
+              Register
+            </button>
+          </div>
+
+          <div class="divider" aria-hidden="true"></div>
+
+          <div class="small">
+            By continuing you agree to our <a href="#">Terms of Service</a> and
+            <a href="#">Privacy Policy</a>.
+          </div>
+        </form>
+      </section>
+    </main>
+
+    <script>
+      // Lightweight client-side validation and nice UX
+      (function () {
+        const form = document.getElementById("regForm");
+        const email = document.getElementById("email");
+        const password = document.getElementById("password");
+        const confirm = document.getElementById("confirm");
+        const registerBtn = document.getElementById("registerBtn");
+        const togglePw = document.getElementById("togglePw");
+
+        const emailError = document.getElementById("emailError");
+        const pwError = document.getElementById("pwError");
+        const confirmError = document.getElementById("confirmError");
+
+        function isEmailValid(v) {
+          // simple but practical email validation
+          return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+        }
+
+        function passwordScore(p) {
+          // small heuristic: length + variety
+          let score = Math.min(10, p.length);
+          if (/[A-Z]/.test(p)) score += 2;
+          if (/[0-9]/.test(p)) score += 2;
+          if (/[^A-Za-z0-9]/.test(p)) score += 2;
+          return score;
+        }
+
+        function validate() {
+          let ok = true;
+
+          // email
+          if (!email.value.trim()) {
+            emailError.textContent = "Email is required.";
+            emailError.style.display = "block";
+            ok = false;
+          } else if (!isEmailValid(email.value.trim())) {
+            emailError.textContent = "Enter a valid email address.";
+            emailError.style.display = "block";
+            ok = false;
+          } else {
+            emailError.style.display = "none";
+          }
+
+          // password
+          if (!password.value) {
+            pwError.textContent = "Password is required.";
+            pwError.style.display = "block";
+            ok = false;
+          } else if (password.value.length < 8) {
+            pwError.textContent = "Password must be at least 8 characters.";
+            pwError.style.display = "block";
+            ok = false;
+          } else if (passwordScore(password.value) < 10) {
+            pwError.textContent =
+              "Try a stronger password (mix letters, numbers & symbols).";
+            pwError.style.display = "block";
+            ok = false;
+          } else {
+            pwError.style.display = "none";
+          }
+
+          // confirm
+          if (!confirm.value) {
+            confirmError.textContent = "Please confirm your password.";
+            confirmError.style.display = "block";
+            ok = false;
+          } else if (password.value !== confirm.value) {
+            confirmError.textContent = "Passwords do not match.";
+            confirmError.style.display = "block";
+            ok = false;
+          } else {
+            confirmError.style.display = "none";
+          }
+
+          registerBtn.disabled = !ok;
+          return ok;
+        }
+
+        // wire up live validation without being too noisy
+        [email, password, confirm].forEach((el) => {
+          el.addEventListener("input", () => {
+            // small debounce-like behavior
+            window.clearTimeout(el._vto);
+            el._vto = window.setTimeout(validate, 220);
+          });
+          el.addEventListener("blur", validate);
+        });
+
+        togglePw.addEventListener("click", () => {
+          const showing = password.type === "text";
+          password.type = showing ? "password" : "text";
+          confirm.type = showing ? "password" : "text";
+          togglePw.textContent = showing ? "Show" : "Hide";
+          togglePw.setAttribute("aria-pressed", String(!showing));
+        });
+
+        form.addEventListener("submit", (e) => {
+          e.preventDefault();
+          if (!validate()) return;
+
+          // mimic a friendly success state — in a real app, send to server
+          registerBtn.disabled = true;
+          registerBtn.textContent = "Creating account...";
+
+          setTimeout(() => {
+            registerBtn.textContent = "Registered ✓";
+            registerBtn.style.boxShadow = "none";
+            // show a small success state and reset form
+            alert(
+              "Account created (client-side demo). Replace this with a server call."
+            );
+            form.reset();
+            registerBtn.textContent = "Register";
+            registerBtn.disabled = true;
+          }, 900);
+        });
+
+        // initial attempt to enable if browser autofills
+        window.addEventListener("load", () => {
+          setTimeout(validate, 300);
+        });
+      })();
+    </script>
+  </body>
+</html>
