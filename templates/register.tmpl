@@ -410,17 +410,35 @@
           registerBtn.disabled = true;
           registerBtn.textContent = "Creating account...";
 
-          setTimeout(() => {
-            registerBtn.textContent = "Registered ✓";
-            registerBtn.style.boxShadow = "none";
-            // show a small success state and reset form
-            alert(
-              "Account created (client-side demo). Replace this with a server call."
-            );
-            form.reset();
-            registerBtn.textContent = "Register";
-            registerBtn.disabled = true;
-          }, 900);
+          // API request for registration
+          const payload = {
+            email: email.value.trim(),
+            password: btoa(password.value),
+          };
+
+          fetch("/register", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+          })
+            .then((res) => res.json())
+            .then((data) => {
+              registerBtn.textContent = "Registered ✓";
+              registerBtn.style.boxShadow = "none";
+              alert("Account created!");
+              console.log(data.message);
+            })
+            .catch((err) => {
+              alert("Failed to create account!");
+              console.error(err);
+            })
+            .finally(() => {
+              form.reset();
+              registerBtn.textContent = "Register";
+              registerBtn.disabled = true;
+            });
         });
 
         // initial attempt to enable if browser autofills
