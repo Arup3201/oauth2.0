@@ -311,13 +311,11 @@
         const form = document.getElementById("regForm");
         const email = document.getElementById("email");
         const password = document.getElementById("password");
-        const confirm = document.getElementById("confirm");
         const registerBtn = document.getElementById("registerBtn");
         const togglePw = document.getElementById("togglePw");
 
         const emailError = document.getElementById("emailError");
         const pwError = document.getElementById("pwError");
-        const confirmError = document.getElementById("confirmError");
 
         function isEmailValid(v) {
           // simple but practical email validation
@@ -367,25 +365,8 @@
             pwError.style.display = "none";
           }
 
-          // confirm
-          if (!confirm.value) {
-            confirmError.textContent = "Please confirm your password.";
-            confirmError.style.display = "block";
-            ok = false;
-          } else if (password.value !== confirm.value) {
-            confirmError.textContent = "Passwords do not match.";
-            confirmError.style.display = "block";
-            ok = false;
-          } else {
-            confirmError.style.display = "none";
-          }
-
-          registerBtn.disabled = !ok;
-          return ok;
-        }
-
         // wire up live validation without being too noisy
-        [email, password, confirm].forEach((el) => {
+        [email, password].forEach((el) => {
           el.addEventListener("input", () => {
             // small debounce-like behavior
             window.clearTimeout(el._vto);
@@ -397,7 +378,6 @@
         togglePw.addEventListener("click", () => {
           const showing = password.type === "text";
           password.type = showing ? "password" : "text";
-          confirm.type = showing ? "password" : "text";
           togglePw.textContent = showing ? "Show" : "Hide";
           togglePw.setAttribute("aria-pressed", String(!showing));
         });
