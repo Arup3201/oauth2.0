@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"log"
 	"os"
 
@@ -8,7 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
-func GetCollection() *mongo.Collection {
+func GetMongoClient() *mongo.Client {
 	uri := os.Getenv("MONGODB_URI")
 	docs := "www.mongodb.com/docs/drivers/go/current/"
 	if uri == "" {
@@ -21,6 +22,16 @@ func GetCollection() *mongo.Collection {
 	if err != nil {
 		panic(err)
 	}
-	coll := client.Database("oauth20db").Collection("users")
-	return coll
+	return client
+}
+
+func DisconnectMongoClient(client *mongo.Client) {
+	if err := client.Disconnect(context.TODO()); err != nil {
+		panic(err)
+	}
+}
+
+func GetMongoCollection(client *mongo.Client, collection string) *mongo.Collection {
+	db := os.Getenv("MONGODB_DATABASE")
+	return client.Database(db).Collection(collection)
 }
