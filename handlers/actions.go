@@ -11,27 +11,38 @@ import (
 	"github.com/arup3201/oauth2.0/constants"
 	"github.com/arup3201/oauth2.0/db"
 	"github.com/arup3201/oauth2.0/models"
+	"github.com/go-playground/validator/v10"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
+func requestValidateError(w http.ResponseWriter, r *http.Request, err error) {
+	errorBody := models.GenerateHTTPError(
+		constants.ERROR_INVALID_PAYLOAD,
+		"The incoming data is invalid for registration",
+		"Payload contains invalid email or password",
+		"Please review your email and password and try with a valid email and password",
+		r.URL.Path,
+		fmt.Errorf("error in decoding register payload: %w", err),
+	)
+	w.WriteHeader(http.StatusBadRequest)
+	json.NewEncoder(w).Encode(models.HTTPResponse{
+		Status:  "Error",
+		Message: "Failed to register",
+		Error:   errorBody,
+	})
+	log.Printf("[ERROR] %s", errorBody)
+}
+
 func Register(w http.ResponseWriter, r *http.Request) {
 	var request models.UserRegisterRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		errorBody := models.GenerateHTTPError(
-			constants.ERROR_INVALID_PAYLOAD,
-			"The incoming data is invalid for registration",
-			"Payload contains invalid email or password",
-			"Please review your email and password and try with a valid email and password",
-			r.URL.Path,
-			fmt.Errorf("error in decoding register payload: %w", err),
-		)
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(models.HTTPResponse{
-			Status:  "Error",
-			Message: "Failed to register",
-			Error:   errorBody,
-		})
-		log.Printf("[ERROR] %s", errorBody)
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&request); err != nil {
+		requestValidateError(w, r, err)
+		return
+	}
+	if err := validator.New().Struct(request); err != nil {
+		requestValidateError(w, r, err)
 		return
 	}
 
@@ -84,6 +95,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := models.HTTPResponse{
+		Status:  "Success",
 		Message: "User registration successful",
 		Data: map[string]string{
 			"_id": result.InsertedID.(bson.ObjectID).String(),

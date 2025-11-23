@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/arup3201/oauth2.0/constants"
 	"github.com/arup3201/oauth2.0/models"
 	"github.com/stretchr/testify/assert"
 )
@@ -42,6 +43,72 @@ func TestRegisterHandler(t *testing.T) {
 			t.Fail()
 			t.Logf("failed to decode response: %s", err)
 		}
+		cleanupMongoDB(t)
+	})
+	t.Run("register success response with user id", func(t *testing.T) {
+		// prepare
+		email, password := "test@example.com", "123"
+		password = base64.StdEncoding.EncodeToString([]byte(password))
+		data := struct {
+			Email    string `json:"email"`
+			Password string `json:"password"`
+		}{
+			Email:    email,
+			Password: password,
+		}
+		body := getRequestBody(t, data)
+		request, err := http.NewRequest("GET", "/register", body)
+		if err != nil {
+			t.Fail()
+			t.Logf("failed to create a request: %s", err)
+			return
+		}
+		rec := httptest.NewRecorder()
+
+		// act
+		handler.ServeHTTP(rec, request)
+
+		// assert
+		var response models.HTTPResponse
+		if err := json.NewDecoder(rec.Body).Decode(&response); err != nil {
+			t.Fail()
+			t.Logf("failed to decode response: %s", err)
+		}
+		assert.Equal(t, "Success", response.Status)
+		assert.NotEqual(t, nil, response.Data)
+		cleanupMongoDB(t)
+	})
+	t.Run("register failure with no email", func(t *testing.T) {
+		// prepare
+		_, password := "test@example.com", "123"
+		password = base64.StdEncoding.EncodeToString([]byte(password))
+		data := struct {
+			Email    string `json:"email"`
+			Password string `json:"password"`
+		}{
+			Password: password,
+		}
+		body := getRequestBody(t, data)
+		request, err := http.NewRequest("GET", "/register", body)
+		if err != nil {
+			t.Fail()
+			t.Logf("failed to create a request: %s", err)
+			return
+		}
+		rec := httptest.NewRecorder()
+
+		// act
+		handler.ServeHTTP(rec, request)
+
+		// assert
+		assert.Equal(t, http.StatusBadRequest, rec.Result().StatusCode)
+		var response models.HTTPResponse
+		if err := json.NewDecoder(rec.Body).Decode(&response); err != nil {
+			t.Fail()
+			t.Logf("failed to decode response: %s", err)
+		}
+		assert.Equal(t, "Error", response.Status)
+		assert.Equal(t, constants.ERROR_INVALID_PAYLOAD, response.Error.Code)
 		cleanupMongoDB(t)
 	})
 }
