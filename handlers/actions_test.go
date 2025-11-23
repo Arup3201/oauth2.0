@@ -111,4 +111,103 @@ func TestRegisterHandler(t *testing.T) {
 		assert.Equal(t, constants.ERROR_INVALID_PAYLOAD, response.Error.Code)
 		cleanupMongoDB(t)
 	})
+	t.Run("register failure with invalid email", func(t *testing.T) {
+		// prepare
+		email, password := "test.example.com", "123"
+		password = base64.StdEncoding.EncodeToString([]byte(password))
+		data := struct {
+			Email    string `json:"email"`
+			Password string `json:"password"`
+		}{
+			Email:    email,
+			Password: password,
+		}
+		body := getRequestBody(t, data)
+		request, err := http.NewRequest("GET", "/register", body)
+		if err != nil {
+			t.Fail()
+			t.Logf("failed to create a request: %s", err)
+			return
+		}
+		rec := httptest.NewRecorder()
+
+		// act
+		handler.ServeHTTP(rec, request)
+
+		// assert
+		assert.Equal(t, http.StatusBadRequest, rec.Result().StatusCode)
+		var response models.HTTPResponse
+		if err := json.NewDecoder(rec.Body).Decode(&response); err != nil {
+			t.Fail()
+			t.Logf("failed to decode response: %s", err)
+		}
+		assert.Equal(t, "Error", response.Status)
+		assert.Equal(t, constants.ERROR_INVALID_PAYLOAD, response.Error.Code)
+		cleanupMongoDB(t)
+	})
+	t.Run("register failure with no password", func(t *testing.T) {
+		// prepare
+		email, _ := "test@example.com", "123"
+		data := struct {
+			Email    string `json:"email"`
+			Password string `json:"password"`
+		}{
+			Email: email,
+		}
+		body := getRequestBody(t, data)
+		request, err := http.NewRequest("GET", "/register", body)
+		if err != nil {
+			t.Fail()
+			t.Logf("failed to create a request: %s", err)
+			return
+		}
+		rec := httptest.NewRecorder()
+
+		// act
+		handler.ServeHTTP(rec, request)
+
+		// assert
+		assert.Equal(t, http.StatusBadRequest, rec.Result().StatusCode)
+		var response models.HTTPResponse
+		if err := json.NewDecoder(rec.Body).Decode(&response); err != nil {
+			t.Fail()
+			t.Logf("failed to decode response: %s", err)
+		}
+		assert.Equal(t, "Error", response.Status)
+		assert.Equal(t, constants.ERROR_INVALID_PAYLOAD, response.Error.Code)
+		cleanupMongoDB(t)
+	})
+	t.Run("register failure for password encoding error", func(t *testing.T) {
+		// prepare
+		email, password := "test@example.com", "123"
+		data := struct {
+			Email    string `json:"email"`
+			Password string `json:"password"`
+		}{
+			Email:    email,
+			Password: password,
+		}
+		body := getRequestBody(t, data)
+		request, err := http.NewRequest("GET", "/register", body)
+		if err != nil {
+			t.Fail()
+			t.Logf("failed to create a request: %s", err)
+			return
+		}
+		rec := httptest.NewRecorder()
+
+		// act
+		handler.ServeHTTP(rec, request)
+
+		// assert
+		assert.Equal(t, http.StatusBadRequest, rec.Result().StatusCode)
+		var response models.HTTPResponse
+		if err := json.NewDecoder(rec.Body).Decode(&response); err != nil {
+			t.Fail()
+			t.Logf("failed to decode response: %s", err)
+		}
+		assert.Equal(t, "Error", response.Status)
+		assert.Equal(t, constants.ERROR_INVALID_PAYLOAD, response.Error.Code)
+		cleanupMongoDB(t)
+	})
 }
