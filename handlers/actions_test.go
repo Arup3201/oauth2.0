@@ -10,6 +10,7 @@ import (
 	"github.com/arup3201/oauth2.0/constants"
 	"github.com/arup3201/oauth2.0/models"
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func TestRegisterHandler(t *testing.T) {
@@ -43,6 +44,7 @@ func TestRegisterHandler(t *testing.T) {
 			t.Fail()
 			t.Logf("failed to decode response: %s", err)
 		}
+		diagnoseMongoDB(t)
 		cleanupMongoDB(t)
 	})
 	t.Run("register success response with user id", func(t *testing.T) {
@@ -209,5 +211,40 @@ func TestRegisterHandler(t *testing.T) {
 		assert.Equal(t, "Error", response.Status)
 		assert.Equal(t, constants.ERROR_INVALID_PAYLOAD, response.Error.Code)
 		cleanupMongoDB(t)
+	})
+	t.Run("register password compare test", func(t *testing.T) {
+		t.Run("register success with 201 status code and response", func(t *testing.T) {
+			// prepare
+			email, password := "test@example.com", "123"
+			encodedPassword := base64.StdEncoding.EncodeToString([]byte(password))
+			data := struct {
+				Email    string `json:"email"`
+				Password string `json:"password"`
+			}{
+				Email:    email,
+				Password: encodedPassword,
+			}
+			body := getRequestBody(t, data)
+			request, err := http.NewRequest("GET", "/register", body)
+			if err != nil {
+				t.Fail()
+				t.Logf("failed to create a request: %s", err)
+				return
+			}
+			rec := httptest.NewRecorder()
+
+			// act
+			handler.ServeHTTP(rec, request)
+
+			// assert
+			dbPass, err := getUserPassword(t, email) // hashed password
+			if err != nil {
+				t.Fail()
+				t.Logf("failed to get password for email: %s", err)
+				return
+			}
+			bcrypt.CompareHashAndPassword([]byte(dbPass), []byte(password))
+			cleanupMongoDB(t)
+		})
 	})
 }
