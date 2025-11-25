@@ -7,7 +7,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/arup3201/oauth2.0/constants"
 	"github.com/arup3201/oauth2.0/models"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/crypto/bcrypt"
@@ -110,7 +109,7 @@ func TestRegisterHandler(t *testing.T) {
 			t.Logf("failed to decode response: %s", err)
 		}
 		assert.Equal(t, "Error", response.Status)
-		assert.Equal(t, constants.ERROR_INVALID_PAYLOAD, response.Error.Code)
+		assert.Equal(t, models.ERROR_INVALID_PAYLOAD, response.Error.Code)
 		cleanupMongoDB(t)
 	})
 	t.Run("register failure with invalid email", func(t *testing.T) {
@@ -144,7 +143,7 @@ func TestRegisterHandler(t *testing.T) {
 			t.Logf("failed to decode response: %s", err)
 		}
 		assert.Equal(t, "Error", response.Status)
-		assert.Equal(t, constants.ERROR_INVALID_PAYLOAD, response.Error.Code)
+		assert.Equal(t, models.ERROR_INVALID_PAYLOAD, response.Error.Code)
 		cleanupMongoDB(t)
 	})
 	t.Run("register failure with no password", func(t *testing.T) {
@@ -176,7 +175,7 @@ func TestRegisterHandler(t *testing.T) {
 			t.Logf("failed to decode response: %s", err)
 		}
 		assert.Equal(t, "Error", response.Status)
-		assert.Equal(t, constants.ERROR_INVALID_PAYLOAD, response.Error.Code)
+		assert.Equal(t, models.ERROR_INVALID_PAYLOAD, response.Error.Code)
 		cleanupMongoDB(t)
 	})
 	t.Run("register failure for password encoding error", func(t *testing.T) {
@@ -209,7 +208,7 @@ func TestRegisterHandler(t *testing.T) {
 			t.Logf("failed to decode response: %s", err)
 		}
 		assert.Equal(t, "Error", response.Status)
-		assert.Equal(t, constants.ERROR_INVALID_PAYLOAD, response.Error.Code)
+		assert.Equal(t, models.ERROR_INVALID_PAYLOAD, response.Error.Code)
 		cleanupMongoDB(t)
 	})
 	t.Run("register password compare test", func(t *testing.T) {
