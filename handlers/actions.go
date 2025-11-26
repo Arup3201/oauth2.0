@@ -39,7 +39,7 @@ func createToken(email string, tokenType string, exp time.Time) (string, error) 
 	if signSecret == "" {
 		return "", fmt.Errorf("[ERROR] environment variable TOKEN_SECRET is missing")
 	}
-	tokenString, err := token.SignedString(signSecret)
+	tokenString, err := token.SignedString([]byte(signSecret))
 	if err != nil {
 		return "", err
 	}

@@ -20,7 +20,8 @@ var handler *http.ServeMux
 func TestMain(m *testing.M) {
 	os.Setenv("MONGODB_DATABASE", "testing")
 	handler = http.NewServeMux()
-	handler.HandleFunc("GET /register", Register)
+	handler.HandleFunc("POST /register", Register)
+	handler.HandleFunc("POST /login", Login)
 
 	code := m.Run()
 

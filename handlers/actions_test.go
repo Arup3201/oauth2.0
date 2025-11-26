@@ -25,7 +25,7 @@ func TestRegisterHandler(t *testing.T) {
 			Password: password,
 		}
 		body := getRequestBody(t, data)
-		request, err := http.NewRequest("GET", "/register", body)
+		request, err := http.NewRequest("POST", "/register", body)
 		if err != nil {
 			t.Fail()
 			t.Logf("failed to create a request: %s", err)
@@ -58,7 +58,7 @@ func TestRegisterHandler(t *testing.T) {
 			Password: password,
 		}
 		body := getRequestBody(t, data)
-		request, err := http.NewRequest("GET", "/register", body)
+		request, err := http.NewRequest("POST", "/register", body)
 		if err != nil {
 			t.Fail()
 			t.Logf("failed to create a request: %s", err)
@@ -90,7 +90,7 @@ func TestRegisterHandler(t *testing.T) {
 			Password: password,
 		}
 		body := getRequestBody(t, data)
-		request, err := http.NewRequest("GET", "/register", body)
+		request, err := http.NewRequest("POST", "/register", body)
 		if err != nil {
 			t.Fail()
 			t.Logf("failed to create a request: %s", err)
@@ -124,7 +124,7 @@ func TestRegisterHandler(t *testing.T) {
 			Password: password,
 		}
 		body := getRequestBody(t, data)
-		request, err := http.NewRequest("GET", "/register", body)
+		request, err := http.NewRequest("POST", "/register", body)
 		if err != nil {
 			t.Fail()
 			t.Logf("failed to create a request: %s", err)
@@ -156,7 +156,7 @@ func TestRegisterHandler(t *testing.T) {
 			Email: email,
 		}
 		body := getRequestBody(t, data)
-		request, err := http.NewRequest("GET", "/register", body)
+		request, err := http.NewRequest("POST", "/register", body)
 		if err != nil {
 			t.Fail()
 			t.Logf("failed to create a request: %s", err)
@@ -189,7 +189,7 @@ func TestRegisterHandler(t *testing.T) {
 			Password: password,
 		}
 		body := getRequestBody(t, data)
-		request, err := http.NewRequest("GET", "/register", body)
+		request, err := http.NewRequest("POST", "/register", body)
 		if err != nil {
 			t.Fail()
 			t.Logf("failed to create a request: %s", err)
@@ -208,42 +208,93 @@ func TestRegisterHandler(t *testing.T) {
 			t.Logf("failed to decode response: %s", err)
 		}
 		assert.Equal(t, "Error", response.Status)
-		assert.Equal(t, models.ERROR_INVALID_PAYLOAD, response.Error.Code)
+		assert.Equal(t, models.ERROR_PASSWORD_ENCODING, response.Error.Code)
 		cleanupMongoDB(t)
 	})
 	t.Run("register password compare test", func(t *testing.T) {
-		t.Run("register success with 201 status code and response", func(t *testing.T) {
-			// prepare
-			email, password := "test@example.com", "123"
-			encodedPassword := base64.StdEncoding.EncodeToString([]byte(password))
-			data := struct {
-				Email    string `json:"email"`
-				Password string `json:"password"`
-			}{
-				Email:    email,
-				Password: encodedPassword,
-			}
-			body := getRequestBody(t, data)
-			request, err := http.NewRequest("GET", "/register", body)
-			if err != nil {
-				t.Fail()
-				t.Logf("failed to create a request: %s", err)
-				return
-			}
-			rec := httptest.NewRecorder()
+		// prepare
+		email, password := "test@example.com", "123"
+		encodedPassword := base64.StdEncoding.EncodeToString([]byte(password))
+		data := struct {
+			Email    string `json:"email"`
+			Password string `json:"password"`
+		}{
+			Email:    email,
+			Password: encodedPassword,
+		}
+		body := getRequestBody(t, data)
+		request, err := http.NewRequest("POST", "/register", body)
+		if err != nil {
+			t.Fail()
+			t.Logf("failed to create a request: %s", err)
+			return
+		}
+		rec := httptest.NewRecorder()
 
-			// act
-			handler.ServeHTTP(rec, request)
+		// act
+		handler.ServeHTTP(rec, request)
 
-			// assert
-			dbPass, err := getUserPassword(t, email) // hashed password
-			if err != nil {
-				t.Fail()
-				t.Logf("failed to get password for email: %s", err)
-				return
-			}
-			bcrypt.CompareHashAndPassword([]byte(dbPass), []byte(password))
-			cleanupMongoDB(t)
-		})
+		// assert
+		dbPass, err := getUserPassword(t, email) // hashed password
+		if err != nil {
+			t.Fail()
+			t.Logf("failed to get password for email: %s", err)
+			return
+		}
+		bcrypt.CompareHashAndPassword([]byte(dbPass), []byte(password))
+		cleanupMongoDB(t)
+	})
+}
+
+func registerTestUser(t testing.TB) {
+	t.Helper()
+
+	email, password := "test@example.com", "123"
+	encodedPassword := base64.StdEncoding.EncodeToString([]byte(password))
+	data := struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}{
+		Email:    email,
+		Password: encodedPassword,
+	}
+	body := getRequestBody(t, data)
+	request, err := http.NewRequest("POST", "/register", body)
+	if err != nil {
+		t.Fail()
+		t.Logf("failed to create a request: %s", err)
+		return
+	}
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, request)
+}
+
+func TestLoginHandler(t *testing.T) {
+	t.Run("login success with 200 response code", func(t *testing.T) {
+		// prepare
+		registerTestUser(t)
+		email, password := "test@example.com", "123"
+		encodedPassword := base64.StdEncoding.EncodeToString([]byte(password))
+		data := struct {
+			Email    string `json:"email"`
+			Password string `json:"password"`
+		}{
+			Email:    email,
+			Password: encodedPassword,
+		}
+		body := getRequestBody(t, data)
+		request, err := http.NewRequest("POST", "/login", body)
+		if err != nil {
+			t.Fail()
+			t.Logf("failed to create a request: %s", err)
+			return
+		}
+		rec := httptest.NewRecorder()
+
+		// act
+		handler.ServeHTTP(rec, request)
+
+		// assert
+		assert.Equal(t, http.StatusOK, rec.Result().StatusCode)
 	})
 }
