@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"testing"
 
 	"github.com/arup3201/oauth2.0/models"
@@ -75,7 +76,7 @@ func TestRegisterHandler(t *testing.T) {
 			t.Fail()
 			t.Logf("failed to decode response: %s", err)
 		}
-		assert.Equal(t, "Success", response.Status)
+		assert.Equal(t, STATUS_SUCCESS, response.Status)
 		assert.NotEqual(t, nil, response.Data)
 		cleanupMongoDB(t)
 	})
@@ -108,7 +109,7 @@ func TestRegisterHandler(t *testing.T) {
 			t.Fail()
 			t.Logf("failed to decode response: %s", err)
 		}
-		assert.Equal(t, "Error", response.Status)
+		assert.Equal(t, STATUS_ERROR, response.Status)
 		assert.Equal(t, models.ERROR_INVALID_PAYLOAD, response.Error.Code)
 		cleanupMongoDB(t)
 	})
@@ -142,7 +143,7 @@ func TestRegisterHandler(t *testing.T) {
 			t.Fail()
 			t.Logf("failed to decode response: %s", err)
 		}
-		assert.Equal(t, "Error", response.Status)
+		assert.Equal(t, STATUS_ERROR, response.Status)
 		assert.Equal(t, models.ERROR_INVALID_PAYLOAD, response.Error.Code)
 		cleanupMongoDB(t)
 	})
@@ -174,7 +175,7 @@ func TestRegisterHandler(t *testing.T) {
 			t.Fail()
 			t.Logf("failed to decode response: %s", err)
 		}
-		assert.Equal(t, "Error", response.Status)
+		assert.Equal(t, STATUS_ERROR, response.Status)
 		assert.Equal(t, models.ERROR_INVALID_PAYLOAD, response.Error.Code)
 		cleanupMongoDB(t)
 	})
@@ -207,7 +208,7 @@ func TestRegisterHandler(t *testing.T) {
 			t.Fail()
 			t.Logf("failed to decode response: %s", err)
 		}
-		assert.Equal(t, "Error", response.Status)
+		assert.Equal(t, STATUS_ERROR, response.Status)
 		assert.Equal(t, models.ERROR_PASSWORD_ENCODING, response.Error.Code)
 		cleanupMongoDB(t)
 	})
@@ -296,5 +297,70 @@ func TestLoginHandler(t *testing.T) {
 
 		// assert
 		assert.Equal(t, http.StatusOK, rec.Result().StatusCode)
+	})
+	t.Run("login success auth token", func(t *testing.T) {
+		// prepare
+		registerTestUser(t)
+		email, password := "test@example.com", "123"
+		encodedPassword := base64.StdEncoding.EncodeToString([]byte(password))
+		data := struct {
+			Email    string `json:"email"`
+			Password string `json:"password"`
+		}{
+			Email:    email,
+			Password: encodedPassword,
+		}
+		body := getRequestBody(t, data)
+		request, err := http.NewRequest("POST", "/login", body)
+		if err != nil {
+			t.Fail()
+			t.Logf("failed to create a request: %s", err)
+			return
+		}
+		rec := httptest.NewRecorder()
+
+		// act
+		handler.ServeHTTP(rec, request)
+
+		// assert
+		var response models.HTTPResponse
+		if err := json.NewDecoder(rec.Body).Decode(&response); err != nil {
+			t.Fail()
+			t.Logf("failed to decode json: %s", err)
+			return
+		}
+		assert.Equal(t, STATUS_SUCCESS, response.Status)
+		assert.NotEqual(t, nil, response.Data)
+	})
+	t.Run("login success refresh token", func(t *testing.T) {
+		// prepare
+		registerTestUser(t)
+		email, password := "test@example.com", "123"
+		encodedPassword := base64.StdEncoding.EncodeToString([]byte(password))
+		data := struct {
+			Email    string `json:"email"`
+			Password string `json:"password"`
+		}{
+			Email:    email,
+			Password: encodedPassword,
+		}
+		body := getRequestBody(t, data)
+		request, err := http.NewRequest("POST", "/login", body)
+		if err != nil {
+			t.Fail()
+			t.Logf("failed to create a request: %s", err)
+			return
+		}
+		rec := httptest.NewRecorder()
+
+		// act
+		handler.ServeHTTP(rec, request)
+
+		// assert
+		cookies := rec.Result().Cookies()
+		ind := slices.IndexFunc(cookies, func(cookie *http.Cookie) bool {
+			return cookie.Name == COOKIE_REFRESH_TOKEN_NAME
+		})
+		assert.NotEqual(t, -1, ind)
 	})
 }

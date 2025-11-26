@@ -18,6 +18,16 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+const (
+	ENV_TOKEN_SECRET          = "TOKEN_SECRET"
+	STATUS_SUCCESS            = "Success"
+	STATUS_ERROR              = "Error"
+	COLLECTION_USERS          = "users"
+	COOKIE_REFRESH_TOKEN_NAME = "refresh_token"
+	TYPE_AUTHENCATION_TOKEN   = "auth"
+	TYPE_REFRESH_TOKEN        = "refresh"
+)
+
 func hashPassword(password []byte) ([]byte, error) {
 	hash, err := bcrypt.GenerateFromPassword(password, 10)
 	if err != nil {
@@ -35,9 +45,9 @@ func createToken(email string, tokenType string, exp time.Time) (string, error) 
 			"exp":   exp,
 		})
 
-	signSecret := os.Getenv("TOKEN_SECRET")
+	signSecret := os.Getenv(ENV_TOKEN_SECRET)
 	if signSecret == "" {
-		return "", fmt.Errorf("[ERROR] environment variable TOKEN_SECRET is missing")
+		return "", fmt.Errorf("[ERROR] environment variable '%s' is missing", ENV_TOKEN_SECRET)
 	}
 	tokenString, err := token.SignedString([]byte(signSecret))
 	if err != nil {
@@ -55,7 +65,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		errorBody := models.InvalidPayloadError(r.URL.Path, fmt.Errorf("error in decoding register payload: %w", err))
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(models.HTTPResponse{
-			Status:  "Error",
+			Status:  STATUS_ERROR,
 			Message: "Failed to register",
 			Error:   errorBody,
 		})
@@ -66,7 +76,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		errorBody := models.InvalidPayloadError(r.URL.Path, fmt.Errorf("error in decoding register payload: %w", err))
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(models.HTTPResponse{
-			Status:  "Error",
+			Status:  STATUS_ERROR,
 			Message: "Failed to register",
 			Error:   errorBody,
 		})
@@ -79,7 +89,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		errorBody := models.PasswordEncodingError(r.URL.Path, fmt.Errorf("error in decoding base64 register password: %w", err))
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(models.HTTPResponse{
-			Status:  "Error",
+			Status:  STATUS_ERROR,
 			Message: "Failed to register",
 			Error:   errorBody,
 		})
@@ -93,7 +103,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		errorBody := models.InternalServerError(r.URL.Path, err)
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(models.HTTPResponse{
-			Status:  "Error",
+			Status:  STATUS_ERROR,
 			Message: "Failed to register",
 			Error:   errorBody,
 		})
@@ -106,7 +116,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	client := db.GetMongoClient()
 	defer db.DisconnectMongoClient(client)
 
-	collection := db.GetMongoCollection(client, "users")
+	collection := db.GetMongoCollection(client, COLLECTION_USERS)
 	user := models.CreateUser(request.Email, request.Password)
 	result, err := collection.InsertOne(context.TODO(), user)
 
@@ -114,7 +124,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		errorBody := models.InternalServerError(r.URL.Path, err)
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(models.HTTPResponse{
-			Status:  "Error",
+			Status:  STATUS_ERROR,
 			Message: "Failed to register",
 			Error:   errorBody,
 		})
@@ -123,7 +133,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := models.HTTPResponse{
-		Status:  "Success",
+		Status:  STATUS_SUCCESS,
 		Message: "User registration successful",
 		Data: map[string]string{
 			"_id": result.InsertedID.(bson.ObjectID).String(),
@@ -141,7 +151,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		errorBody := models.InvalidPayloadError(r.URL.Path, fmt.Errorf("error in decoding register payload: %w", err))
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(models.HTTPResponse{
-			Status:  "Error",
+			Status:  STATUS_ERROR,
 			Message: "Failed to login",
 			Error:   errorBody,
 		})
@@ -152,7 +162,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		errorBody := models.InvalidPayloadError(r.URL.Path, fmt.Errorf("error in decoding register payload: %w", err))
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(models.HTTPResponse{
-			Status:  "Error",
+			Status:  STATUS_ERROR,
 			Message: "Failed to login",
 			Error:   errorBody,
 		})
@@ -165,7 +175,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		errorBody := models.PasswordEncodingError(r.URL.Path, fmt.Errorf("error in decoding base64 register password: %w", err))
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(models.HTTPResponse{
-			Status:  "Error",
+			Status:  STATUS_ERROR,
 			Message: "Failed to login",
 			Error:   errorBody,
 		})
@@ -178,13 +188,13 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	client := db.GetMongoClient()
 	defer db.DisconnectMongoClient(client)
 
-	coll := db.GetMongoCollection(client, "users")
+	coll := db.GetMongoCollection(client, COLLECTION_USERS)
 	cursor, err := coll.Find(context.TODO(), bson.M{"email": request.Email})
 	if err != nil {
 		errorBody := models.InternalServerError(r.URL.Path, fmt.Errorf("error in finding user with email: %w", err))
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(models.HTTPResponse{
-			Status:  "Error",
+			Status:  STATUS_ERROR,
 			Message: "Failed to login",
 			Error:   errorBody,
 		})
@@ -198,7 +208,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		errorBody := models.InternalServerError(r.URL.Path, fmt.Errorf("error in getting all documents: %w", err))
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(models.HTTPResponse{
-			Status:  "Error",
+			Status:  STATUS_ERROR,
 			Message: "Failed to login",
 			Error:   errorBody,
 		})
@@ -210,7 +220,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		errorBody := models.UserNotFoundError(r.URL.Path, fmt.Errorf("no user found with given email: %w", err))
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(models.HTTPResponse{
-			Status:  "Error",
+			Status:  STATUS_ERROR,
 			Message: "Failed to login",
 			Error:   errorBody,
 		})
@@ -223,7 +233,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		errorBody := models.PasswordMismatchError(r.URL.Path, fmt.Errorf("user provided password and hashed password mismatch: %w", err))
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(models.HTTPResponse{
-			Status:  "Error",
+			Status:  STATUS_ERROR,
 			Message: "Failed to login",
 			Error:   errorBody,
 		})
@@ -231,12 +241,12 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	authToken, err := createToken(request.Email, "auth", time.Now().Add(time.Minute*5))
+	authToken, err := createToken(request.Email, TYPE_AUTHENCATION_TOKEN, time.Now().Add(time.Minute*5))
 	if err != nil {
 		errorBody := models.InternalServerError(r.URL.Path, fmt.Errorf("error in getting all documents: %w", err))
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(models.HTTPResponse{
-			Status:  "Error",
+			Status:  STATUS_ERROR,
 			Message: "Failed to login",
 			Error:   errorBody,
 		})
@@ -245,12 +255,12 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	refreshExpTime := time.Now().Add(time.Hour * 24)
-	refreshToken, err := createToken(request.Email, "refresh", refreshExpTime)
+	refreshToken, err := createToken(request.Email, TYPE_REFRESH_TOKEN, refreshExpTime)
 	if err != nil {
 		errorBody := models.InternalServerError(r.URL.Path, fmt.Errorf("error in getting all documents: %w", err))
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(models.HTTPResponse{
-			Status:  "Error",
+			Status:  STATUS_ERROR,
 			Message: "Failed to login",
 			Error:   errorBody,
 		})
@@ -258,17 +268,8 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response := models.HTTPResponse{
-		Status:  "Success",
-		Message: "User authentication successful",
-		Data: map[string]string{
-			"token": authToken,
-		},
-	}
-	json.NewEncoder(w).Encode(response)
-
 	cookie := http.Cookie{
-		Name:     "refresh_token",
+		Name:     COOKIE_REFRESH_TOKEN_NAME,
 		Value:    refreshToken,
 		Path:     "/",
 		MaxAge:   refreshExpTime.Hour() * 3600,
@@ -277,4 +278,13 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteLaxMode,
 	}
 	http.SetCookie(w, &cookie)
+
+	response := models.HTTPResponse{
+		Status:  STATUS_SUCCESS,
+		Message: "User authentication successful",
+		Data: map[string]string{
+			"token": authToken,
+		},
+	}
+	json.NewEncoder(w).Encode(response)
 }

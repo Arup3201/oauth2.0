@@ -9,13 +9,18 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
+const (
+	ENV_MONGODB_URI      = "MONGODB_URI"
+	ENV_MONGODB_DATABASE = "MONGODB_DATABASE"
+)
+
 func GetMongoClient() *mongo.Client {
-	uri := os.Getenv("MONGODB_URI")
+	uri := os.Getenv(ENV_MONGODB_URI)
 	docs := "www.mongodb.com/docs/drivers/go/current/"
 	if uri == "" {
-		log.Fatal("Set your 'MONGODB_URI' environment variable. " +
-			"See: " + docs +
-			"usage-examples/#environment-variable")
+		log.Fatalf("Set your '%s' environment variable. "+
+			"See: "+docs+
+			"usage-examples/#environment-variable", ENV_MONGODB_URI)
 	}
 	client, err := mongo.Connect(options.Client().
 		ApplyURI(uri))
@@ -32,6 +37,6 @@ func DisconnectMongoClient(client *mongo.Client) {
 }
 
 func GetMongoCollection(client *mongo.Client, collection string) *mongo.Collection {
-	db := os.Getenv("MONGODB_DATABASE")
+	db := os.Getenv(ENV_MONGODB_DATABASE)
 	return client.Database(db).Collection(collection)
 }
