@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Register — Example</title>
+    <title>Register — OAuth 2.0 Authorizer</title>
     <!-- Google font for that clean Material/Google look -->
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap"
@@ -197,7 +197,7 @@
   <body>
     <main class="container">
       <div class="brand">
-        <img src="../images/oauth20.png" height="40" />
+        <img src="images/oauth20.png" height="40" />
         <div>
           <h1 class="title">Create your account with OAuth 2.0</h1>
           <div class="subtitle">Get started with your new account</div>
@@ -265,25 +265,6 @@
             ></div>
           </div>
 
-          <div class="input-wrap">
-            <label for="confirm">Confirm password</label>
-            <input
-              id="confirm"
-              name="confirm"
-              type="password"
-              required
-              aria-required="true"
-              placeholder="Re-enter your password"
-            />
-            <div
-              id="confirmError"
-              class="error"
-              role="alert"
-              aria-live="polite"
-              style="display: none"
-            ></div>
-          </div>
-
           <div class="actions">
             <button
               id="registerBtn"
@@ -293,6 +274,10 @@
             >
               Register
             </button>
+          </div>
+
+          <div class="small">
+            Already have an account? <a href="/login-page">Login</a>
           </div>
 
           <div class="divider" aria-hidden="true"></div>
@@ -364,6 +349,9 @@
           } else {
             pwError.style.display = "none";
           }
+
+          registerBtn.disabled = !ok;
+          return ok;
         }
 
         // wire up live validation without being too noisy
@@ -391,6 +379,7 @@
           registerBtn.disabled = true;
           registerBtn.textContent = "Creating account...";
 
+          // API request for registration
           const payload = {
             email: email.value.trim(),
             password: btoa(password.value),

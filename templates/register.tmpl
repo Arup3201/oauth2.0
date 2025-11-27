@@ -276,6 +276,10 @@
             </button>
           </div>
 
+          <div class="small">
+            Already have an account? <a href="/login-page">Login</a>
+          </div>
+
           <div class="divider" aria-hidden="true"></div>
 
           <div class="small">
@@ -349,7 +353,6 @@
           registerBtn.disabled = !ok;
           return ok;
         }
-      }
 
         // wire up live validation without being too noisy
         [email, password].forEach((el) => {

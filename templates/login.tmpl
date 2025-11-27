@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Login — OAuth 2.0 Authorizer</title>
+    <title>Login — Example</title>
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap"
       rel="stylesheet"
@@ -181,7 +181,7 @@
   <body>
     <main class="container">
       <div class="brand">
-        <img src="images/oauth20.png" height="40" />
+        <img src="../images/oauth20.png" height="40" />
         <div>
           <h1 class="title">Sign in</h1>
           <div class="subtitle">Continue to your account</div>
@@ -234,7 +234,7 @@
           <div class="divider"></div>
 
           <div class="small">
-            Don't have an account? <a href="/register-page">Register</a>
+            Don't have an account? <a href="#">Register</a>
           </div>
         </form>
       </section>
@@ -298,11 +298,34 @@
           loginBtn.disabled = true;
           loginBtn.textContent = "Signing in...";
 
-          setTimeout(() => {
-            alert("Logged in (client-side demo). Replace with real API call.");
-            loginBtn.textContent = "Login";
-            loginBtn.disabled = false;
-          }, 900);
+          // API request for login
+          const payload = {
+            email: email.value.trim(),
+            password: btoa(password.value),
+          };
+          fetch("/login", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+          })
+            .then((res) => res.json())
+            .then((responseData) => {
+              window.localStorage.setItem(
+                "auth_token",
+                responseData.data.token
+              );
+              window.location.href = "/consent-page";
+            })
+            .catch((err) => {
+              alert("Login error! Make sure you are an existing user.");
+              console.error(err);
+            })
+            .finally(() => {
+              loginBtn.disabled = false;
+              loginBtn.textContent = "Login";
+            });
         });
 
         window.addEventListener("load", () => setTimeout(validate, 200));

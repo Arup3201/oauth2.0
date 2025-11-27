@@ -113,10 +113,32 @@ func Register(w http.ResponseWriter, r *http.Request) {
 
 	request.Password = string(hashed)
 
-	client := db.GetMongoClient()
+	client, err := db.GetMongoClient()
+	if err != nil {
+		errorBody := models.InternalServerError(r.URL.Path, err)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(models.HTTPResponse{
+			Status:  STATUS_ERROR,
+			Message: "Failed to register",
+			Error:   errorBody,
+		})
+		log.Printf("[ERROR] %s", errorBody)
+		return
+	}
 	defer db.DisconnectMongoClient(client)
 
-	collection := db.GetMongoCollection(client, COLLECTION_USERS)
+	collection, err := db.GetMongoCollection(client, COLLECTION_USERS)
+	if err != nil {
+		errorBody := models.InternalServerError(r.URL.Path, err)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(models.HTTPResponse{
+			Status:  STATUS_ERROR,
+			Message: "Failed to register",
+			Error:   errorBody,
+		})
+		log.Printf("[ERROR] %s", errorBody)
+		return
+	}
 	user := models.CreateUser(request.Email, request.Password)
 	result, err := collection.InsertOne(context.TODO(), user)
 
@@ -185,10 +207,32 @@ func Login(w http.ResponseWriter, r *http.Request) {
 
 	request.Password = string(decoded)
 
-	client := db.GetMongoClient()
+	client, err := db.GetMongoClient()
+	if err != nil {
+		errorBody := models.InternalServerError(r.URL.Path, fmt.Errorf("error in finding user with email: %w", err))
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(models.HTTPResponse{
+			Status:  STATUS_ERROR,
+			Message: "Failed to login",
+			Error:   errorBody,
+		})
+		log.Printf("[ERROR] %s", errorBody)
+		return
+	}
 	defer db.DisconnectMongoClient(client)
 
-	coll := db.GetMongoCollection(client, COLLECTION_USERS)
+	coll, err := db.GetMongoCollection(client, COLLECTION_USERS)
+	if err != nil {
+		errorBody := models.InternalServerError(r.URL.Path, fmt.Errorf("error in finding user with email: %w", err))
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(models.HTTPResponse{
+			Status:  STATUS_ERROR,
+			Message: "Failed to login",
+			Error:   errorBody,
+		})
+		log.Printf("[ERROR] %s", errorBody)
+		return
+	}
 	cursor, err := coll.Find(context.TODO(), bson.M{"email": request.Email})
 	if err != nil {
 		errorBody := models.InternalServerError(r.URL.Path, fmt.Errorf("error in finding user with email: %w", err))
@@ -217,7 +261,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(results) < 1 {
-		errorBody := models.UserNotFoundError(r.URL.Path, fmt.Errorf("no user found with given email: %w", err))
+		errorBody := models.UserNotFoundError(r.URL.Path, fmt.Errorf("no user found with given email"))
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(models.HTTPResponse{
 			Status:  STATUS_ERROR,

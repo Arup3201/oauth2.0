@@ -298,11 +298,34 @@
           loginBtn.disabled = true;
           loginBtn.textContent = "Signing in...";
 
-          setTimeout(() => {
-            alert("Logged in (client-side demo). Replace with real API call.");
-            loginBtn.textContent = "Login";
-            loginBtn.disabled = false;
-          }, 900);
+          // API request for login
+          const payload = {
+            email: email.value.trim(),
+            password: btoa(password.value),
+          };
+          fetch("/login", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+          })
+            .then((res) => res.json())
+            .then((responseData) => {
+              window.localStorage.setItem(
+                "auth_token",
+                responseData.data.token
+              );
+              window.location.href = "/consent-page";
+            })
+            .catch((err) => {
+              alert("Login error! Make sure you are an existing user.");
+              console.error(err);
+            })
+            .finally(() => {
+              loginBtn.disabled = false;
+              loginBtn.textContent = "Login";
+            });
         });
 
         window.addEventListener("load", () => setTimeout(validate, 200));

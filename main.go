@@ -22,6 +22,7 @@ func main() {
 	mux.HandleFunc("GET /consent-page", handlers.ConsentPage)
 
 	mux.HandleFunc("POST /register", handlers.Register)
+	mux.HandleFunc("POST /login", handlers.Login)
 
 	server := &http.Server{
 		Addr:         fmt.Sprintf("%s:%d", HOST, PORT),

@@ -44,9 +44,19 @@ func getRequestBody(t testing.TB, data any) io.Reader {
 func cleanupMongoDB(t testing.TB) {
 	t.Helper()
 
-	client := db.GetMongoClient()
-	coll := db.GetMongoCollection(client, "users")
-	_, err := coll.DeleteMany(context.TODO(), bson.M{})
+	client, err := db.GetMongoClient()
+	if err != nil {
+		t.Fail()
+		t.Logf("failed to cleanup users collection: %s", err)
+		return
+	}
+	coll, err := db.GetMongoCollection(client, COLLECTION_USERS)
+	if err != nil {
+		t.Fail()
+		t.Logf("failed to cleanup users collection: %s", err)
+		return
+	}
+	_, err = coll.DeleteMany(context.TODO(), bson.M{})
 	if err != nil {
 		t.Fail()
 		t.Logf("failed to cleanup users collection: %s", err)
@@ -57,8 +67,18 @@ func cleanupMongoDB(t testing.TB) {
 func diagnoseMongoDB(t testing.TB) {
 	t.Helper()
 
-	client := db.GetMongoClient()
-	coll := db.GetMongoCollection(client, "users")
+	client, err := db.GetMongoClient()
+	if err != nil {
+		t.Fail()
+		t.Logf("failed to cleanup users collection: %s", err)
+		return
+	}
+	coll, err := db.GetMongoCollection(client, COLLECTION_USERS)
+	if err != nil {
+		t.Fail()
+		t.Logf("failed to cleanup users collection: %s", err)
+		return
+	}
 	cursor, err := coll.Find(context.TODO(), bson.M{})
 	if err != nil {
 		t.Logf("MongoDB diagnose error: %s", err)
@@ -73,8 +93,14 @@ func diagnoseMongoDB(t testing.TB) {
 func getUserPassword(t testing.TB, email string) (string, error) {
 	t.Helper()
 
-	client := db.GetMongoClient()
-	coll := db.GetMongoCollection(client, "users")
+	client, err := db.GetMongoClient()
+	if err != nil {
+		return "", fmt.Errorf("failed to cleanup users collection: %s", err)
+	}
+	coll, err := db.GetMongoCollection(client, COLLECTION_USERS)
+	if err != nil {
+		return "", fmt.Errorf("failed to cleanup users collection: %s", err)
+	}
 	cursor, err := coll.Find(context.TODO(), bson.M{"email": email})
 	if err != nil {
 		return "", err

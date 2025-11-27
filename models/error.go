@@ -65,7 +65,7 @@ func PasswordEncodingError(path string, err error) *HTTPError {
 
 func UserNotFoundError(path string, err error) *HTTPError {
 	return GenerateHTTPError(
-		ERROR_INTERNAL_SERVER,
+		ERROR_INVALID_USER,
 		"The user is not found",
 		"There is no user with given user email",
 		"Please use the correct user email and try again",
