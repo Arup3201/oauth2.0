@@ -39,8 +39,3 @@ func RegisterPage(w http.ResponseWriter, r *http.Request) {
 func LoginPage(w http.ResponseWriter, r *http.Request) {
 	parseExecuteTemplate("templates/login.tmpl", w, nil)
 }
-
-func ConsentPage(w http.ResponseWriter, r *http.Request) {
-	// extract client data and scopes
-	parseExecuteTemplate("templates/permissions.tmpl", w, nil)
-}

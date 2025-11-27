@@ -332,3 +332,8 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 	json.NewEncoder(w).Encode(response)
 }
+
+func Authorize(w http.ResponseWriter, r *http.Request) {
+	// extract client data and scopes
+	parseExecuteTemplate("templates/permissions.tmpl", w, nil)
+}

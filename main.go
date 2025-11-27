@@ -17,12 +17,12 @@ const (
 func main() {
 	mux := http.NewServeMux()
 	mux.Handle("/images/", http.StripPrefix("/images/", http.FileServer(http.Dir("images"))))
-	mux.HandleFunc("GET /register-page", handlers.RegisterPage)
-	mux.HandleFunc("GET /login-page", handlers.LoginPage)
-	mux.HandleFunc("GET /consent-page", handlers.ConsentPage)
+	mux.HandleFunc("GET /register", handlers.RegisterPage)
+	mux.HandleFunc("GET /login", handlers.LoginPage)
 
 	mux.HandleFunc("POST /register", handlers.Register)
 	mux.HandleFunc("POST /login", handlers.Login)
+	mux.HandleFunc("GET /auth", handlers.Authorize)
 
 	server := &http.Server{
 		Addr:         fmt.Sprintf("%s:%d", HOST, PORT),
