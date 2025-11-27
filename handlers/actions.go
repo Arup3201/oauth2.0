@@ -20,8 +20,6 @@ import (
 
 const (
 	ENV_TOKEN_SECRET          = "TOKEN_SECRET"
-	STATUS_SUCCESS            = "Success"
-	STATUS_ERROR              = "Error"
 	COLLECTION_USERS          = "users"
 	COOKIE_REFRESH_TOKEN_NAME = "refresh_token"
 	TYPE_AUTHENCATION_TOKEN   = "auth"
@@ -62,7 +60,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		errorBody := models.InvalidPayloadError(r.URL.Path, fmt.Errorf("error in decoding register payload: %w", err))
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(models.HTTPResponse{
-			Status:  STATUS_ERROR,
+			Status:  models.STATUS_ERROR,
 			Message: "Failed to register",
 			Error:   errorBody,
 		})
@@ -72,7 +70,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		errorBody := models.InternalServerError(r.URL.Path, err)
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(models.HTTPResponse{
-			Status:  STATUS_ERROR,
+			Status:  models.STATUS_ERROR,
 			Message: "Failed to register",
 			Error:   errorBody,
 		})
@@ -82,7 +80,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		errorBody := models.PasswordEncodingError(r.URL.Path, fmt.Errorf("error in decoding base64 register password: %w", err))
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(models.HTTPResponse{
-			Status:  STATUS_ERROR,
+			Status:  models.STATUS_ERROR,
 			Message: "Failed to register",
 			Error:   errorBody,
 		})
@@ -137,7 +135,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := models.HTTPResponse{
-		Status:  STATUS_SUCCESS,
+		Status:  models.STATUS_SUCCESS,
 		Message: "User registration successful",
 		Data: map[string]string{
 			"_id": result.InsertedID.(bson.ObjectID).String(),
@@ -152,7 +150,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		errorBody := models.InvalidPayloadError(r.URL.Path, fmt.Errorf("error in decoding register payload: %w", err))
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(models.HTTPResponse{
-			Status:  STATUS_ERROR,
+			Status:  models.STATUS_ERROR,
 			Message: "Failed to login",
 			Error:   errorBody,
 		})
@@ -162,7 +160,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		errorBody := models.PasswordEncodingError(r.URL.Path, fmt.Errorf("error in decoding base64 register password: %w", err))
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(models.HTTPResponse{
-			Status:  STATUS_ERROR,
+			Status:  models.STATUS_ERROR,
 			Message: "Failed to login",
 			Error:   errorBody,
 		})
@@ -172,7 +170,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		errorBody := models.InternalServerError(r.URL.Path, fmt.Errorf("error in finding user with email: %w", err))
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(models.HTTPResponse{
-			Status:  STATUS_ERROR,
+			Status:  models.STATUS_ERROR,
 			Message: "Failed to login",
 			Error:   errorBody,
 		})
@@ -182,7 +180,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		errorBody := models.UserNotFoundError(r.URL.Path, fmt.Errorf("no user found with given email"))
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(models.HTTPResponse{
-			Status:  STATUS_ERROR,
+			Status:  models.STATUS_ERROR,
 			Message: "Failed to login",
 			Error:   errorBody,
 		})
@@ -192,7 +190,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		errorBody := models.PasswordMismatchError(r.URL.Path, fmt.Errorf("user provided password and hashed password mismatch: %w", err))
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(models.HTTPResponse{
-			Status:  STATUS_ERROR,
+			Status:  models.STATUS_ERROR,
 			Message: "Failed to login",
 			Error:   errorBody,
 		})
@@ -280,7 +278,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &cookie)
 
 	response := models.HTTPResponse{
-		Status:  STATUS_SUCCESS,
+		Status:  models.STATUS_SUCCESS,
 		Message: "User authentication successful",
 		Data: map[string]string{
 			"token": authToken,

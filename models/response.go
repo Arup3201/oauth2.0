@@ -6,3 +6,8 @@ type HTTPResponse struct {
 	Data    any        `json:"data,omitempty"`
 	Error   *HTTPError `json:"error,omitempty"`
 }
+
+const (
+	STATUS_SUCCESS = "Success"
+	STATUS_ERROR   = "Error"
+)

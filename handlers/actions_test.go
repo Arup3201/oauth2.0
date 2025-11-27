@@ -76,7 +76,7 @@ func TestRegisterHandler(t *testing.T) {
 			t.Fail()
 			t.Logf("failed to decode response: %s", err)
 		}
-		assert.Equal(t, STATUS_SUCCESS, response.Status)
+		assert.Equal(t, models.STATUS_SUCCESS, response.Status)
 		assert.NotEqual(t, nil, response.Data)
 		cleanupMongoDB(t)
 	})
@@ -109,7 +109,7 @@ func TestRegisterHandler(t *testing.T) {
 			t.Fail()
 			t.Logf("failed to decode response: %s", err)
 		}
-		assert.Equal(t, STATUS_ERROR, response.Status)
+		assert.Equal(t, models.STATUS_ERROR, response.Status)
 		assert.Equal(t, models.ERROR_INVALID_PAYLOAD, response.Error.Code)
 		cleanupMongoDB(t)
 	})
@@ -143,7 +143,7 @@ func TestRegisterHandler(t *testing.T) {
 			t.Fail()
 			t.Logf("failed to decode response: %s", err)
 		}
-		assert.Equal(t, STATUS_ERROR, response.Status)
+		assert.Equal(t, models.STATUS_ERROR, response.Status)
 		assert.Equal(t, models.ERROR_INVALID_PAYLOAD, response.Error.Code)
 		cleanupMongoDB(t)
 	})
@@ -175,7 +175,7 @@ func TestRegisterHandler(t *testing.T) {
 			t.Fail()
 			t.Logf("failed to decode response: %s", err)
 		}
-		assert.Equal(t, STATUS_ERROR, response.Status)
+		assert.Equal(t, models.STATUS_ERROR, response.Status)
 		assert.Equal(t, models.ERROR_INVALID_PAYLOAD, response.Error.Code)
 		cleanupMongoDB(t)
 	})
@@ -208,7 +208,7 @@ func TestRegisterHandler(t *testing.T) {
 			t.Fail()
 			t.Logf("failed to decode response: %s", err)
 		}
-		assert.Equal(t, STATUS_ERROR, response.Status)
+		assert.Equal(t, models.STATUS_ERROR, response.Status)
 		assert.Equal(t, models.ERROR_PASSWORD_ENCODING, response.Error.Code)
 		cleanupMongoDB(t)
 	})
@@ -329,7 +329,7 @@ func TestLoginHandler(t *testing.T) {
 			t.Logf("failed to decode json: %s", err)
 			return
 		}
-		assert.Equal(t, STATUS_SUCCESS, response.Status)
+		assert.Equal(t, models.STATUS_SUCCESS, response.Status)
 		assert.NotEqual(t, nil, response.Data)
 	})
 	t.Run("login success refresh token", func(t *testing.T) {
