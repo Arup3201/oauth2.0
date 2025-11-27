@@ -58,10 +58,7 @@ func createToken(email string, tokenType string, exp time.Time) (string, error) 
 }
 
 func Register(w http.ResponseWriter, r *http.Request) {
-	var request models.UserRegisterRequest
-	dec := json.NewDecoder(r.Body)
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&request); err != nil {
+	respondPayloadError := func(err error) {
 		errorBody := models.InvalidPayloadError(r.URL.Path, fmt.Errorf("error in decoding register payload: %w", err))
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(models.HTTPResponse{
@@ -70,22 +67,18 @@ func Register(w http.ResponseWriter, r *http.Request) {
 			Error:   errorBody,
 		})
 		log.Printf("[ERROR] %s", errorBody)
-		return
 	}
-	if err := validator.New().Struct(request); err != nil {
-		errorBody := models.InvalidPayloadError(r.URL.Path, fmt.Errorf("error in decoding register payload: %w", err))
-		w.WriteHeader(http.StatusBadRequest)
+	respondInternalError := func(err error) {
+		errorBody := models.InternalServerError(r.URL.Path, err)
+		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(models.HTTPResponse{
 			Status:  STATUS_ERROR,
 			Message: "Failed to register",
 			Error:   errorBody,
 		})
 		log.Printf("[ERROR] %s", errorBody)
-		return
 	}
-
-	decoded, err := base64.StdEncoding.DecodeString(request.Password)
-	if err != nil {
+	respondEncodingError := func(err error) {
 		errorBody := models.PasswordEncodingError(r.URL.Path, fmt.Errorf("error in decoding base64 register password: %w", err))
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(models.HTTPResponse{
@@ -94,20 +87,30 @@ func Register(w http.ResponseWriter, r *http.Request) {
 			Error:   errorBody,
 		})
 		log.Printf("[ERROR] %s", errorBody)
+	}
+
+	var request models.UserRegisterRequest
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&request); err != nil {
+		respondPayloadError(err)
+		return
+	}
+	if err := validator.New().Struct(request); err != nil {
+		respondPayloadError(err)
+		return
+	}
+
+	decoded, err := base64.StdEncoding.DecodeString(request.Password)
+	if err != nil {
+		respondEncodingError(err)
 		return
 	}
 
 	request.Password = string(decoded)
 	hashed, err := hashPassword([]byte(request.Password))
 	if err != nil {
-		errorBody := models.InternalServerError(r.URL.Path, err)
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(models.HTTPResponse{
-			Status:  STATUS_ERROR,
-			Message: "Failed to register",
-			Error:   errorBody,
-		})
-		log.Printf("[ERROR] %s", errorBody)
+		respondInternalError(err)
 		return
 	}
 
@@ -115,42 +118,21 @@ func Register(w http.ResponseWriter, r *http.Request) {
 
 	client, err := db.GetMongoClient()
 	if err != nil {
-		errorBody := models.InternalServerError(r.URL.Path, err)
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(models.HTTPResponse{
-			Status:  STATUS_ERROR,
-			Message: "Failed to register",
-			Error:   errorBody,
-		})
-		log.Printf("[ERROR] %s", errorBody)
+		respondInternalError(err)
 		return
 	}
 	defer db.DisconnectMongoClient(client)
 
 	collection, err := db.GetMongoCollection(client, COLLECTION_USERS)
 	if err != nil {
-		errorBody := models.InternalServerError(r.URL.Path, err)
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(models.HTTPResponse{
-			Status:  STATUS_ERROR,
-			Message: "Failed to register",
-			Error:   errorBody,
-		})
-		log.Printf("[ERROR] %s", errorBody)
+		respondInternalError(err)
 		return
 	}
 	user := models.CreateUser(request.Email, request.Password)
 	result, err := collection.InsertOne(context.TODO(), user)
 
 	if err != nil {
-		errorBody := models.InternalServerError(r.URL.Path, err)
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(models.HTTPResponse{
-			Status:  STATUS_ERROR,
-			Message: "Failed to register",
-			Error:   errorBody,
-		})
-		log.Printf("[ERROR] %s", errorBody)
+		respondInternalError(err)
 		return
 	}
 
@@ -166,10 +148,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 }
 
 func Login(w http.ResponseWriter, r *http.Request) {
-	var request models.UserRegisterRequest
-	dec := json.NewDecoder(r.Body)
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&request); err != nil {
+	respondInvalidPayload := func(err error) {
 		errorBody := models.InvalidPayloadError(r.URL.Path, fmt.Errorf("error in decoding register payload: %w", err))
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(models.HTTPResponse{
@@ -178,22 +157,8 @@ func Login(w http.ResponseWriter, r *http.Request) {
 			Error:   errorBody,
 		})
 		log.Printf("[ERROR] %s", errorBody)
-		return
 	}
-	if err := validator.New().Struct(request); err != nil {
-		errorBody := models.InvalidPayloadError(r.URL.Path, fmt.Errorf("error in decoding register payload: %w", err))
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(models.HTTPResponse{
-			Status:  STATUS_ERROR,
-			Message: "Failed to login",
-			Error:   errorBody,
-		})
-		log.Printf("[ERROR] %s", errorBody)
-		return
-	}
-
-	decoded, err := base64.StdEncoding.DecodeString(request.Password)
-	if err != nil {
+	respondInvalidEncoding := func(err error) {
 		errorBody := models.PasswordEncodingError(r.URL.Path, fmt.Errorf("error in decoding base64 register password: %w", err))
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(models.HTTPResponse{
@@ -202,13 +167,8 @@ func Login(w http.ResponseWriter, r *http.Request) {
 			Error:   errorBody,
 		})
 		log.Printf("[ERROR] %s", errorBody)
-		return
 	}
-
-	request.Password = string(decoded)
-
-	client, err := db.GetMongoClient()
-	if err != nil {
+	respondInternalError := func(err error) {
 		errorBody := models.InternalServerError(r.URL.Path, fmt.Errorf("error in finding user with email: %w", err))
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(models.HTTPResponse{
@@ -217,50 +177,8 @@ func Login(w http.ResponseWriter, r *http.Request) {
 			Error:   errorBody,
 		})
 		log.Printf("[ERROR] %s", errorBody)
-		return
 	}
-	defer db.DisconnectMongoClient(client)
-
-	coll, err := db.GetMongoCollection(client, COLLECTION_USERS)
-	if err != nil {
-		errorBody := models.InternalServerError(r.URL.Path, fmt.Errorf("error in finding user with email: %w", err))
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(models.HTTPResponse{
-			Status:  STATUS_ERROR,
-			Message: "Failed to login",
-			Error:   errorBody,
-		})
-		log.Printf("[ERROR] %s", errorBody)
-		return
-	}
-	cursor, err := coll.Find(context.TODO(), bson.M{"email": request.Email})
-	if err != nil {
-		errorBody := models.InternalServerError(r.URL.Path, fmt.Errorf("error in finding user with email: %w", err))
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(models.HTTPResponse{
-			Status:  STATUS_ERROR,
-			Message: "Failed to login",
-			Error:   errorBody,
-		})
-		log.Printf("[ERROR] %s", errorBody)
-		return
-	}
-
-	var results []models.User
-	err = cursor.All(context.TODO(), &results)
-	if err != nil {
-		errorBody := models.InternalServerError(r.URL.Path, fmt.Errorf("error in getting all documents: %w", err))
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(models.HTTPResponse{
-			Status:  STATUS_ERROR,
-			Message: "Failed to login",
-			Error:   errorBody,
-		})
-		log.Printf("[ERROR] %s", errorBody)
-		return
-	}
-
-	if len(results) < 1 {
+	respondUserNotFound := func() {
 		errorBody := models.UserNotFoundError(r.URL.Path, fmt.Errorf("no user found with given email"))
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(models.HTTPResponse{
@@ -269,11 +187,8 @@ func Login(w http.ResponseWriter, r *http.Request) {
 			Error:   errorBody,
 		})
 		log.Printf("[ERROR] %s", errorBody)
-		return
 	}
-
-	user := results[0]
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(request.Password)); err != nil {
+	respondPasswordMismatch := func(err error) {
 		errorBody := models.PasswordMismatchError(r.URL.Path, fmt.Errorf("user provided password and hashed password mismatch: %w", err))
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(models.HTTPResponse{
@@ -282,33 +197,74 @@ func Login(w http.ResponseWriter, r *http.Request) {
 			Error:   errorBody,
 		})
 		log.Printf("[ERROR] %s", errorBody)
+	}
+
+	var request models.UserRegisterRequest
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&request); err != nil {
+		respondInvalidPayload(err)
+		return
+	}
+	if err := validator.New().Struct(request); err != nil {
+		respondInvalidPayload(err)
+		return
+	}
+
+	decoded, err := base64.StdEncoding.DecodeString(request.Password)
+	if err != nil {
+		respondInvalidEncoding(err)
+		return
+	}
+
+	request.Password = string(decoded)
+
+	client, err := db.GetMongoClient()
+	if err != nil {
+		respondInternalError(err)
+		return
+	}
+	defer db.DisconnectMongoClient(client)
+
+	coll, err := db.GetMongoCollection(client, COLLECTION_USERS)
+	if err != nil {
+		respondInternalError(err)
+		return
+	}
+	cursor, err := coll.Find(context.TODO(), bson.M{"email": request.Email})
+	if err != nil {
+		respondInternalError(err)
+		return
+	}
+
+	var results []models.User
+	err = cursor.All(context.TODO(), &results)
+	if err != nil {
+		respondInternalError(err)
+		return
+	}
+
+	if len(results) < 1 {
+		respondUserNotFound()
+		return
+	}
+
+	user := results[0]
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(request.Password)); err != nil {
+		respondPasswordMismatch(err)
 		return
 	}
 
 	authToken, err := createToken(request.Email, TYPE_AUTHENCATION_TOKEN, time.Now().Add(time.Minute*5))
 	if err != nil {
-		errorBody := models.InternalServerError(r.URL.Path, fmt.Errorf("error in getting all documents: %w", err))
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(models.HTTPResponse{
-			Status:  STATUS_ERROR,
-			Message: "Failed to login",
-			Error:   errorBody,
-		})
-		log.Printf("[ERROR] %s", errorBody)
+		respondInternalError(err)
 		return
 	}
 
 	refreshExpTime := time.Now().Add(time.Hour * 24)
 	refreshToken, err := createToken(request.Email, TYPE_REFRESH_TOKEN, refreshExpTime)
 	if err != nil {
-		errorBody := models.InternalServerError(r.URL.Path, fmt.Errorf("error in getting all documents: %w", err))
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(models.HTTPResponse{
-			Status:  STATUS_ERROR,
-			Message: "Failed to login",
-			Error:   errorBody,
-		})
-		log.Printf("[ERROR] %s", errorBody)
+		respondInternalError(err)
 		return
 	}
 
