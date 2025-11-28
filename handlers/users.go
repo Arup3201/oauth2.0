@@ -177,7 +177,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		log.Printf("[ERROR] %s", errorBody)
 	}
 	respondInternalError := func(err error) {
-		errorBody := models.InternalServerError(r.URL.Path, fmt.Errorf("error in finding user with email: %w", err))
+		errorBody := models.InternalServerError(r.URL.Path, fmt.Errorf("internal server error: %w", err))
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(models.HTTPResponse{
 			Status:  models.STATUS_ERROR,

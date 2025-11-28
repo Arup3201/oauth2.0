@@ -6,7 +6,11 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/arup3201/oauth2.0/db"
 	"github.com/arup3201/oauth2.0/handlers"
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/mongodb"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
 const (
@@ -15,6 +19,31 @@ const (
 )
 
 func main() {
+	client, err := db.GetMongoClient()
+	defer db.DisconnectMongoClient(client)
+	if err != nil {
+		log.Fatalf("mongodb client connection error: %s", err)
+	}
+	dbName, err := db.GetDBName()
+	if err != nil {
+		log.Fatalf("mongodb database name error: %s", err)
+	}
+	driver, err := mongodb.WithInstance(client, &mongodb.Config{
+		DatabaseName: dbName,
+	})
+	if err != nil {
+		log.Fatalf("mongodb driver instance create error: %s", err)
+	}
+	m, err := migrate.NewWithDatabaseInstance(
+		"file://migrations",
+		dbName, driver)
+	if err != nil {
+		log.Fatalf("mongodb migration error: %s", err)
+	}
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+		log.Fatalf("migration failed: %v", err)
+	}
+
 	mux := http.NewServeMux()
 	mux.Handle("/images/", http.StripPrefix("/images/", http.FileServer(http.Dir("images"))))
 	mux.HandleFunc("GET /register", handlers.RegisterPage)
@@ -33,7 +62,7 @@ func main() {
 
 	log.Printf("server started at %s:%d", HOST, PORT)
 
-	err := server.ListenAndServe()
+	err = server.ListenAndServe()
 	if err != nil {
 		log.Fatalf("error starting server")
 	}

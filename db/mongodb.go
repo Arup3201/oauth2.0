@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
-	"go.mongodb.org/mongo-driver/v2/mongo"
-	"go.mongodb.org/mongo-driver/v2/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 const (
@@ -24,7 +25,9 @@ func GetMongoClient() (*mongo.Client, error) {
 			"usage-examples/#environment-variable", ENV_MONGODB_URI)
 		return nil, fmt.Errorf("missing environment variable '%s'", ENV_MONGODB_URI)
 	}
-	client, err := mongo.Connect(options.Client().
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	client, err := mongo.Connect(ctx, options.Client().
 		ApplyURI(uri))
 	if err != nil {
 		return nil, err
@@ -40,10 +43,18 @@ func DisconnectMongoClient(client *mongo.Client) error {
 	return nil
 }
 
-func GetMongoCollection(client *mongo.Client, collection string) (*mongo.Collection, error) {
+func GetDBName() (string, error) {
 	db := os.Getenv(ENV_MONGODB_DATABASE)
 	if db == "" {
-		return nil, fmt.Errorf("missing environment variable '%s'", ENV_MONGODB_DATABASE)
+		return "", fmt.Errorf("missing environment variable '%s'", ENV_MONGODB_DATABASE)
+	}
+	return db, nil
+}
+
+func GetMongoCollection(client *mongo.Client, collection string) (*mongo.Collection, error) {
+	db, err := GetDBName()
+	if err != nil {
+		return nil, err
 	}
 	return client.Database(db).Collection(collection), nil
 }

@@ -1,0 +1,11 @@
+[
+    {
+        "insert": "apis",
+        "documents": [
+            {
+                "_id": 1,
+                "name": "Notes"
+            }
+        ]
+    }
+]
