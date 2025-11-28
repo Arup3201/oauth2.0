@@ -34,12 +34,24 @@ func (err *HTTPError) Error() string {
 }
 
 const (
+	ERROR_INVALID_QUERY     = "INVALID_QUERY"
 	ERROR_INVALID_PAYLOAD   = "INVALID_PAYLOAD"
 	ERROR_PASSWORD_ENCODING = "MALFORMED_PASSWORD_ENCODING"
 	ERROR_INVALID_USER      = "INVALID_USER_EMAIL"
 	ERROR_PASSWORD_MISMATCH = "PASSWORD_MISMATCH"
 	ERROR_INTERNAL_SERVER   = "INTERNAL_SERVER_FAILED"
 )
+
+func InvalidQueryError(path string, err error) *HTTPError {
+	return GenerateHTTPError(
+		ERROR_INVALID_QUERY,
+		"The incoming request query is invalid",
+		"Request contains missing or malformed query values",
+		"Please check the request url with correct query format and try again",
+		path,
+		err,
+	)
+}
 
 func InvalidPayloadError(path string, err error) *HTTPError {
 	return GenerateHTTPError(

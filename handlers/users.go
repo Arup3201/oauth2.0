@@ -146,6 +146,16 @@ func Register(w http.ResponseWriter, r *http.Request) {
 }
 
 func Login(w http.ResponseWriter, r *http.Request) {
+	respondInvalidQuery := func(err error) {
+		errorBody := models.InvalidQueryError(r.URL.Path, fmt.Errorf("error parsing request query values: %w", err))
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(models.HTTPResponse{
+			Status:  models.STATUS_ERROR,
+			Message: "Failed to login",
+			Error:   errorBody,
+		})
+		log.Printf("[ERROR] %s", errorBody)
+	}
 	respondInvalidPayload := func(err error) {
 		errorBody := models.InvalidPayloadError(r.URL.Path, fmt.Errorf("error in decoding register payload: %w", err))
 		w.WriteHeader(http.StatusBadRequest)
@@ -195,6 +205,18 @@ func Login(w http.ResponseWriter, r *http.Request) {
 			Error:   errorBody,
 		})
 		log.Printf("[ERROR] %s", errorBody)
+	}
+
+	queries := r.URL.Query()
+	responseType := queries.Get("response_type")
+	clientId := queries.Get("client_id")
+	redirectUri := queries.Get("redirect_uri")
+	scope := queries.Get("scope")
+	state := queries.Get("state")
+
+	if responseType == "" || clientId == "" || redirectUri == "" || scope == "" || state == "" {
+		respondInvalidQuery(fmt.Errorf("some of the required queries response_type, client_id, redirect_uri, scope or state are missing or malformed"))
+		return
 	}
 
 	var request models.UserRegisterRequest
@@ -253,38 +275,13 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	authToken, err := createToken(request.Email, TYPE_AUTHENCATION_TOKEN, time.Now().Add(time.Minute*5))
-	if err != nil {
-		respondInternalError(err)
-		return
-	}
-
-	refreshExpTime := time.Now().Add(time.Hour * 24)
-	refreshToken, err := createToken(request.Email, TYPE_REFRESH_TOKEN, refreshExpTime)
-	if err != nil {
-		respondInternalError(err)
-		return
-	}
-
-	cookie := http.Cookie{
-		Name:     COOKIE_REFRESH_TOKEN_NAME,
-		Value:    refreshToken,
-		Path:     "/",
-		MaxAge:   refreshExpTime.Hour() * 3600,
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteLaxMode,
-	}
-	http.SetCookie(w, &cookie)
-
-	response := models.HTTPResponse{
-		Status:  models.STATUS_SUCCESS,
-		Message: "User authentication successful",
-		Data: map[string]string{
-			"token": authToken,
-		},
-	}
-	json.NewEncoder(w).Encode(response)
+	authUrl := `/auth?` +
+		`response_type=` + responseType +
+		`&client_id=` + clientId +
+		`&redirect_uri=` + redirectUri +
+		`&scope=` + scope +
+		`&state=` + state
+	http.Redirect(w, r, authUrl, http.StatusSeeOther)
 }
 
 func Authorize(w http.ResponseWriter, r *http.Request) {

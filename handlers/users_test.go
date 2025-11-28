@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"slices"
 	"testing"
 
 	"github.com/arup3201/oauth2.0/models"
@@ -271,7 +270,7 @@ func registerTestUser(t testing.TB) {
 }
 
 func TestLoginHandler(t *testing.T) {
-	t.Run("login success with 200 response code", func(t *testing.T) {
+	t.Run("login success with 303 response code", func(t *testing.T) {
 		// prepare
 		registerTestUser(t)
 		email, password := "test@example.com", "123"
@@ -284,7 +283,12 @@ func TestLoginHandler(t *testing.T) {
 			Password: encodedPassword,
 		}
 		body := getRequestBody(t, data)
-		request, err := http.NewRequest("POST", "/login", body)
+		request, err := http.NewRequest("POST", "/login?"+
+			"response_type=code"+
+			"&client_id=29352735982374239857"+
+			"&scope=write.post+read.post"+
+			"&redirect_uri=http://localhost:8082/api/posts/1"+
+			"&state=xcoivjuywkdkhvusuye3kch", body)
 		if err != nil {
 			t.Fail()
 			t.Logf("failed to create a request: %s", err)
@@ -296,71 +300,6 @@ func TestLoginHandler(t *testing.T) {
 		handler.ServeHTTP(rec, request)
 
 		// assert
-		assert.Equal(t, http.StatusOK, rec.Result().StatusCode)
-	})
-	t.Run("login success auth token", func(t *testing.T) {
-		// prepare
-		registerTestUser(t)
-		email, password := "test@example.com", "123"
-		encodedPassword := base64.StdEncoding.EncodeToString([]byte(password))
-		data := struct {
-			Email    string `json:"email"`
-			Password string `json:"password"`
-		}{
-			Email:    email,
-			Password: encodedPassword,
-		}
-		body := getRequestBody(t, data)
-		request, err := http.NewRequest("POST", "/login", body)
-		if err != nil {
-			t.Fail()
-			t.Logf("failed to create a request: %s", err)
-			return
-		}
-		rec := httptest.NewRecorder()
-
-		// act
-		handler.ServeHTTP(rec, request)
-
-		// assert
-		var response models.HTTPResponse
-		if err := json.NewDecoder(rec.Body).Decode(&response); err != nil {
-			t.Fail()
-			t.Logf("failed to decode json: %s", err)
-			return
-		}
-		assert.Equal(t, models.STATUS_SUCCESS, response.Status)
-		assert.NotEqual(t, nil, response.Data)
-	})
-	t.Run("login success refresh token", func(t *testing.T) {
-		// prepare
-		registerTestUser(t)
-		email, password := "test@example.com", "123"
-		encodedPassword := base64.StdEncoding.EncodeToString([]byte(password))
-		data := struct {
-			Email    string `json:"email"`
-			Password string `json:"password"`
-		}{
-			Email:    email,
-			Password: encodedPassword,
-		}
-		body := getRequestBody(t, data)
-		request, err := http.NewRequest("POST", "/login", body)
-		if err != nil {
-			t.Fail()
-			t.Logf("failed to create a request: %s", err)
-			return
-		}
-		rec := httptest.NewRecorder()
-
-		// act
-		handler.ServeHTTP(rec, request)
-
-		// assert
-		cookies := rec.Result().Cookies()
-		ind := slices.IndexFunc(cookies, func(cookie *http.Cookie) bool {
-			return cookie.Name == COOKIE_REFRESH_TOKEN_NAME
-		})
-		assert.NotEqual(t, -1, ind)
+		assert.Equal(t, http.StatusSeeOther, rec.Result().StatusCode)
 	})
 }
