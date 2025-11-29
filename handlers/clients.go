@@ -100,7 +100,7 @@ func ClientRegister(w http.ResponseWriter, r *http.Request) {
 
 	response := models.HTTPResponse{
 		Status:  models.STATUS_SUCCESS,
-		Message: "User registration successful",
+		Message: "Client registration successful",
 		Data: map[string]string{
 			"client_id":           clientObj.Id,
 			"client_secret":       clientObj.ClientSecret,

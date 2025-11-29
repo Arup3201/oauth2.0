@@ -53,6 +53,8 @@ func main() {
 	mux.HandleFunc("POST /login", handlers.Login)
 	mux.HandleFunc("GET /auth", handlers.Authorize)
 
+	mux.HandleFunc("POST /clients", handlers.ClientRegister)
+
 	server := &http.Server{
 		Addr:         fmt.Sprintf("%s:%d", HOST, PORT),
 		ReadTimeout:  10 * time.Second,
