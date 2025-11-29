@@ -11,7 +11,23 @@ type Client struct {
 	UpdatedAt    time.Time `json:"updated_at" bson:"updated_at"`
 }
 
+func CreateClient(id, secret, name, redirect string) Client {
+	return Client{
+		Id:           id,
+		ClientSecret: secret,
+		Name:         name,
+		RedirectURI:  redirect,
+		CreatedAt:    time.Now().UTC(),
+		UpdatedAt:    time.Now().UTC(),
+	}
+}
+
 type ClientScope struct {
 	ClientId string `json:"client_id" bson:"client_id"`
 	ScopeId  string `json:"scope_id" bson:"scope_id"`
+}
+
+type ClientRegisterRequest struct {
+	Name        string `json:"name"`
+	RedirectURI string `json:"redirect_uri"`
 }

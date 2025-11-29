@@ -20,8 +20,11 @@ var handler *http.ServeMux
 func TestMain(m *testing.M) {
 	os.Setenv("MONGODB_DATABASE", "testing")
 	handler = http.NewServeMux()
+
 	handler.HandleFunc("POST /register", Register)
 	handler.HandleFunc("POST /login", Login)
+
+	handler.HandleFunc("POST /clients", ClientRegister)
 
 	code := m.Run()
 
@@ -50,17 +53,21 @@ func cleanupMongoDB(t testing.TB) {
 		t.Logf("failed to cleanup users collection: %s", err)
 		return
 	}
-	coll, err := db.GetMongoCollection(client, COLLECTION_USERS)
-	if err != nil {
-		t.Fail()
-		t.Logf("failed to cleanup users collection: %s", err)
-		return
-	}
-	_, err = coll.DeleteMany(context.TODO(), bson.M{})
-	if err != nil {
-		t.Fail()
-		t.Logf("failed to cleanup users collection: %s", err)
-		return
+
+	collections := []string{COLLECTION_USERS, COLLECTION_CLIENTS}
+	for _, collStr := range collections {
+		coll, err := db.GetMongoCollection(client, collStr)
+		if err != nil {
+			t.Fail()
+			t.Logf("failed to cleanup '%s' collection: %s", collStr, err)
+			return
+		}
+		_, err = coll.DeleteMany(context.TODO(), bson.M{})
+		if err != nil {
+			t.Fail()
+			t.Logf("failed to cleanup '%s' collection: %s", collStr, err)
+			return
+		}
 	}
 }
 
