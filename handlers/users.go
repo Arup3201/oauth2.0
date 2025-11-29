@@ -14,6 +14,7 @@ import (
 	"github.com/arup3201/oauth2.0/models"
 	"github.com/go-playground/validator/v10"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -126,8 +127,10 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		respondInternalError(err)
 		return
 	}
-	user := models.CreateUser(request.Email, request.Password)
-	result, err := collection.InsertOne(context.TODO(), user)
+	id := uuid.New()
+	userId := id.String()
+	user := models.CreateUser(userId, request.Email, request.Password)
+	_, err = collection.InsertOne(context.TODO(), user)
 
 	if err != nil {
 		respondInternalError(err)
@@ -138,7 +141,8 @@ func Register(w http.ResponseWriter, r *http.Request) {
 		Status:  models.STATUS_SUCCESS,
 		Message: "User registration successful",
 		Data: map[string]string{
-			"_id": result.InsertedID.(bson.ObjectID).String(),
+			"userId": user.Id,
+			"email":  user.Email,
 		},
 	}
 	w.WriteHeader(http.StatusCreated)

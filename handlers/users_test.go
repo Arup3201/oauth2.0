@@ -301,5 +301,6 @@ func TestLoginHandler(t *testing.T) {
 
 		// assert
 		assert.Equal(t, http.StatusSeeOther, rec.Result().StatusCode)
+		cleanupMongoDB(t)
 	})
 }

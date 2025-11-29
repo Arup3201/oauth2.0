@@ -3,14 +3,16 @@ package models
 import "time"
 
 type User struct {
-	Email     string    `json:"email"`
-	Password  string    `json:"password"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	Id        string    `json:"id" bson:"_id"`
+	Email     string    `json:"email"  bson:"email"`
+	Password  string    `json:"password" bson:"password"`
+	CreatedAt time.Time `json:"created_at" bson:"created_at"`
+	UpdatedAt time.Time `json:"updated_at" bson:"updated_at"`
 }
 
-func CreateUser(email, password string) User {
+func CreateUser(id, email, password string) User {
 	return User{
+		Id:        id,
 		Email:     email,
 		Password:  password,
 		CreatedAt: time.Now().UTC(),
