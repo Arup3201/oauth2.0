@@ -34,12 +34,14 @@ func (err *HTTPError) Error() string {
 }
 
 const (
-	ERROR_INVALID_QUERY     = "INVALID_QUERY"
-	ERROR_INVALID_PAYLOAD   = "INVALID_PAYLOAD"
-	ERROR_PASSWORD_ENCODING = "MALFORMED_PASSWORD_ENCODING"
-	ERROR_INVALID_USER      = "INVALID_USER_EMAIL"
-	ERROR_PASSWORD_MISMATCH = "PASSWORD_MISMATCH"
-	ERROR_INTERNAL_SERVER   = "INTERNAL_SERVER_FAILED"
+	ERROR_INVALID_QUERY          = "INVALID_QUERY"
+	ERROR_INVALID_PAYLOAD        = "INVALID_PAYLOAD"
+	ERROR_PASSWORD_ENCODING      = "MALFORMED_PASSWORD_ENCODING"
+	ERROR_INVALID_USER           = "INVALID_USER_EMAIL"
+	ERROR_INVALID_CLIENT         = "INVALID_CLIENT_ID"
+	ERROR_PASSWORD_MISMATCH      = "PASSWORD_MISMATCH"
+	ERROR_CLIENT_SECRET_MISMATCH = "CLIENT_SECRET_MISMATCH"
+	ERROR_INTERNAL_SERVER        = "INTERNAL_SERVER_FAILED"
 )
 
 func InvalidQueryError(path string, err error) *HTTPError {
@@ -86,12 +88,34 @@ func UserNotFoundError(path string, err error) *HTTPError {
 	)
 }
 
+func ClientNotFound(path string, err error) *HTTPError {
+	return GenerateHTTPError(
+		ERROR_INVALID_CLIENT,
+		"The client is not found",
+		"There is no client with given client ID",
+		"Please use the correct client ID and try again",
+		path,
+		err,
+	)
+}
+
 func PasswordMismatchError(path string, err error) *HTTPError {
 	return GenerateHTTPError(
 		ERROR_PASSWORD_MISMATCH,
 		"Password did not match",
 		"User provided a wrong password",
 		"Please use the correct user password and try again",
+		path,
+		err,
+	)
+}
+
+func ClientSecretMismatchError(path string, err error) *HTTPError {
+	return GenerateHTTPError(
+		ERROR_CLIENT_SECRET_MISMATCH,
+		"Client secret did not match",
+		"Client provided a wrong secret key",
+		"Please use the correct client secret and try again",
 		path,
 		err,
 	)

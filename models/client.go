@@ -23,11 +23,24 @@ func CreateClient(id, secret, name, redirect string) Client {
 }
 
 type ClientScope struct {
-	ClientId string `json:"client_id" bson:"client_id"`
-	ScopeId  string `json:"scope_id" bson:"scope_id"`
+	ClientId string   `json:"client_id" bson:"client_id"`
+	Scopes   []string `json:"scope_ids" bson:"scope_ids"`
+}
+
+func CreateClientScope(clientId string, scopes []string) ClientScope {
+	return ClientScope{
+		ClientId: clientId,
+		Scopes:   scopes,
+	}
 }
 
 type ClientRegisterRequest struct {
 	Name        string `json:"name"`
 	RedirectURI string `json:"redirect_uri"`
+}
+
+type ClientScopesRequest struct {
+	ClientId     string   `json:"client_id"`
+	ClientSecret string   `json:"client_secret"`
+	Scopes       []string `json:"scopes"` // slice of scope ids
 }
