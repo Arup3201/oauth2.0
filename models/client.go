@@ -40,7 +40,7 @@ type ClientRegisterRequest struct {
 }
 
 type ClientScopesRequest struct {
-	ClientId     string   `json:"client_id"`
-	ClientSecret string   `json:"client_secret"`
-	Scopes       []string `json:"scopes"` // slice of scope ids
+	ClientId     string   `json:"client_id" validate:"required"`
+	ClientSecret string   `json:"client_secret" validate:"required"`
+	Scopes       []string `json:"scopes" validate:"required"` // slice of scope ids
 }

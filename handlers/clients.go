@@ -226,10 +226,10 @@ func AddClientScopes(w http.ResponseWriter, r *http.Request) {
 
 	response := models.HTTPResponse{
 		Status:  models.STATUS_SUCCESS,
-		Message: "User registration successful",
+		Message: "Scopes added to the client successful",
 		Data: map[string]any{
-			"clientId": clientScope.ClientId,
-			"scopes":   clientScope.Scopes,
+			"client_id": clientScope.ClientId,
+			"scopes":    clientScope.Scopes,
 		},
 	}
 	w.WriteHeader(http.StatusCreated)

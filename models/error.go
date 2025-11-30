@@ -58,9 +58,9 @@ func InvalidQueryError(path string, err error) *HTTPError {
 func InvalidPayloadError(path string, err error) *HTTPError {
 	return GenerateHTTPError(
 		ERROR_INVALID_PAYLOAD,
-		"The incoming data is invalid for registration",
-		"Payload contains invalid email or password",
-		"Please review your email and password and try with a valid email and password",
+		"The incoming request is invalid",
+		"Payload contains invalid values",
+		"Please review your request and try with a valid payload",
 		path,
 		err,
 	)
@@ -81,8 +81,8 @@ func UserNotFoundError(path string, err error) *HTTPError {
 	return GenerateHTTPError(
 		ERROR_INVALID_USER,
 		"The user is not found",
-		"There is no user with given user email",
-		"Please use the correct user email and try again",
+		"There is no user with given user credentials",
+		"Please use the correct user credentials and try again",
 		path,
 		err,
 	)

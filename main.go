@@ -19,6 +19,8 @@ const (
 )
 
 func main() {
+	// migrations
+
 	client, err := db.GetMongoClient()
 	defer db.DisconnectMongoClient(client)
 	if err != nil {
@@ -44,6 +46,8 @@ func main() {
 		log.Fatalf("migration failed: %v", err)
 	}
 
+	// HTTP handlers
+
 	mux := http.NewServeMux()
 	mux.Handle("/images/", http.StripPrefix("/images/", http.FileServer(http.Dir("images"))))
 	mux.HandleFunc("GET /register", handlers.RegisterPage)
@@ -54,6 +58,9 @@ func main() {
 	mux.HandleFunc("GET /auth", handlers.Authorize)
 
 	mux.HandleFunc("POST /clients", handlers.ClientRegister)
+	mux.HandleFunc("POST /clients/scopes", handlers.AddClientScopes)
+
+	// server
 
 	server := &http.Server{
 		Addr:         fmt.Sprintf("%s:%d", HOST, PORT),
