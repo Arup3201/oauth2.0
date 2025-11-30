@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/arup3201/oauth2.0/db"
@@ -22,6 +23,7 @@ import (
 const (
 	ENV_TOKEN_SECRET          = "TOKEN_SECRET"
 	COLLECTION_USERS          = "users"
+	COLLECTION_SCOPES         = "scopes"
 	COOKIE_REFRESH_TOKEN_NAME = "refresh_token"
 	TYPE_AUTHENCATION_TOKEN   = "auth"
 	TYPE_REFRESH_TOKEN        = "refresh"
@@ -289,6 +291,142 @@ func Login(w http.ResponseWriter, r *http.Request) {
 }
 
 func Authorize(w http.ResponseWriter, r *http.Request) {
-	// extract client data and scopes
-	parseExecuteTemplate("templates/permissions.tmpl", w, nil)
+	respondInvalidQuery := func(err error) {
+		errorBody := models.InvalidQueryError(r.URL.Path, fmt.Errorf("error parsing request query values: %w", err))
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(models.HTTPResponse{
+			Status:  models.STATUS_ERROR,
+			Message: "Failed to athorize",
+			Error:   errorBody,
+		})
+		log.Printf("[ERROR] %s", errorBody)
+	}
+	respondClientNotFound := func() {
+		errorBody := models.ClientNotFound(r.URL.Path, fmt.Errorf("no client found with given clientID"))
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(models.HTTPResponse{
+			Status:  models.STATUS_ERROR,
+			Message: "Failed to authorize",
+			Error:   errorBody,
+		})
+		log.Printf("[ERROR] %s", errorBody)
+	}
+	respondScopeNotFound := func() {
+		errorBody := models.ResourceNotFound(r.URL.Path, fmt.Errorf("no scope found with given scope id"))
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(models.HTTPResponse{
+			Status:  models.STATUS_ERROR,
+			Message: "Failed to authorize",
+			Error:   errorBody,
+		})
+		log.Printf("[ERROR] %s", errorBody)
+	}
+	respondInternalError := func(err error) {
+		errorBody := models.InternalServerError(r.URL.Path, fmt.Errorf("internal server error: %w", err))
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(models.HTTPResponse{
+			Status:  models.STATUS_ERROR,
+			Message: "Failed to authorize",
+			Error:   errorBody,
+		})
+		log.Printf("[ERROR] %s", errorBody)
+	}
+
+	queries := r.URL.Query()
+	responseType := queries.Get("response_type")
+	clientId := queries.Get("client_id")
+	redirectUri := queries.Get("redirect_uri")
+	scope := queries.Get("scope")
+	state := queries.Get("state")
+
+	if responseType == "" || clientId == "" || redirectUri == "" || scope == "" || state == "" {
+		respondInvalidQuery(fmt.Errorf("some of the required queries response_type, client_id, redirect_uri, scope or state are missing or malformed"))
+		return
+	}
+
+	// get mongodb client
+
+	client, err := db.GetMongoClient()
+	if err != nil {
+		respondInternalError(err)
+		return
+	}
+	defer db.DisconnectMongoClient(client)
+
+	// find and verify client id
+
+	collection, err := db.GetMongoCollection(client, COLLECTION_CLIENTS)
+	if err != nil {
+		respondInternalError(err)
+		return
+	}
+
+	cursor, err := collection.Find(context.TODO(), bson.M{"_id": clientId})
+	if err != nil {
+		respondInternalError(err)
+		return
+	}
+
+	var clientObjs []models.Client
+	err = cursor.All(context.TODO(), &clientObjs)
+	if err != nil {
+		respondInternalError(err)
+		return
+	}
+
+	if len(clientObjs) < 1 {
+		respondClientNotFound()
+		return
+	}
+
+	// fetch scopes
+
+	collection, err = db.GetMongoCollection(client, COLLECTION_SCOPES)
+	if err != nil {
+		respondInternalError(err)
+		return
+	}
+
+	scopes := strings.Fields(scope)
+
+	scopeDescriptions := []string{}
+	for i := range len(scopes) {
+		cursor, err = collection.Find(context.TODO(), bson.M{"_id": scopes[i]})
+		if err != nil {
+			respondInternalError(err)
+			return
+		}
+
+		var results []models.Scope
+		err = cursor.All(context.TODO(), &results)
+		if err != nil {
+			respondInternalError(err)
+			return
+		}
+
+		if len(results) < 1 {
+			respondScopeNotFound()
+			return
+		}
+
+		scopeDescriptions = append(scopeDescriptions, results[0].UserFacingDescription)
+	}
+
+	// consent page
+	templateData := struct {
+		AppIcon    string
+		ClientName string
+		ClientURL  string
+		Scopes     []string
+	}{
+		AppIcon:    string(clientObjs[0].Name[0]),
+		ClientName: clientObjs[0].Name,
+		ClientURL:  "http://example.com", // TODO: Client web origin URL
+		Scopes:     scopeDescriptions,
+	}
+	err = parseExecuteTemplate("templates/permissions.tmpl", w, &templateData)
+	if err != nil {
+		respondInternalError(err)
+		return
+	}
 }

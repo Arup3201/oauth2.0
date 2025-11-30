@@ -3,15 +3,13 @@
         "insert": "scopes",
         "documents": [
             {
-                "_id": 1,
-                "api_id": 1,
-                "scope": "notes:read",
+                "_id": "notes:read",
+                "api_id": "1",
                 "user_facing_description": "Allows this app to read all notes you have created in your Notes account."
             },
             {
-                "_id": 2,
-                "api_id": 1,
-                "scope": "notes:write",
+                "_id": "notes:write",
+                "api_id": "1",
                 "user_facing_description": "Allows the app to create notes for you — for example, to save content or sync notes from its own interface."
             }
         ]

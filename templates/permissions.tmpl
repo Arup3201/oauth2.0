@@ -152,7 +152,7 @@
 
       <section class="card">
         <div class="app-info">
-          <div class="app-icon">A</div>
+          <div class="app-icon">{{ .AppIcon }}</div>
           <div>
             <div style="font-size: 17px; font-weight: 600">{{ .ClientName }}</div>
             <div style="font-size: 13px; color: var(--muted)">
@@ -167,7 +167,7 @@
 
         <ul class="scope-list">
         {{ range $scope := .Scopes }}
-          <li>{{ scope }}</li>
+          <li>{{ $scope }}</li>
         {{ end }}
         </ul>
 
@@ -179,7 +179,7 @@
         <div class="divider"></div>
 
         <div style="font-size: 14px; margin-bottom: 10px">
-          Do you trust <strong>AwesomeClient</strong> with your data?
+          Do you trust <strong>{{ .ClientName }}</strong> with your data?
         </div>
 
         <div class="actions">

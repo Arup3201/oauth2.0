@@ -303,20 +303,20 @@
             email: email.value.trim(),
             password: btoa(password.value),
           };
-          fetch("/login", {
+          const queries = window.location.search;
+          fetch("/login" + queries, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
             },
             body: JSON.stringify(payload),
           })
-            .then((res) => res.json())
-            .then((responseData) => {
-              window.localStorage.setItem(
-                "auth_token",
-                responseData.data.token
-              );
-              window.location.href = "/consent-page";
+            .then((response) => {
+              // HTTP 301 response
+              // HOW CAN I FOLLOW THE HTTP REDIRECT RESPONSE?
+              if (response.redirected) {
+                window.location.href = response.url;
+              }
             })
             .catch((err) => {
               alert("Login error! Make sure you are an existing user.");

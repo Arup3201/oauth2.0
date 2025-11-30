@@ -37,6 +37,7 @@ const (
 	ERROR_INVALID_QUERY          = "INVALID_QUERY"
 	ERROR_INVALID_PAYLOAD        = "INVALID_PAYLOAD"
 	ERROR_PASSWORD_ENCODING      = "MALFORMED_PASSWORD_ENCODING"
+	ERROR_RESOURCE_NOT_FOUND     = "RESOURCE_NOT_FOUND"
 	ERROR_INVALID_USER           = "INVALID_USER_EMAIL"
 	ERROR_INVALID_CLIENT         = "INVALID_CLIENT_ID"
 	ERROR_PASSWORD_MISMATCH      = "PASSWORD_MISMATCH"
@@ -72,6 +73,17 @@ func PasswordEncodingError(path string, err error) *HTTPError {
 		"The incoming data encoding is invalid",
 		"Payload contains invalid password encoding",
 		"Please check with your user-agent to send supported password encoding",
+		path,
+		err,
+	)
+}
+
+func ResourceNotFound(path string, err error) *HTTPError {
+	return GenerateHTTPError(
+		ERROR_RESOURCE_NOT_FOUND,
+		"The resource is not found",
+		"There is no resource with given resource properties",
+		"Please use the correct resource properties and try again",
 		path,
 		err,
 	)
