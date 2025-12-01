@@ -13,6 +13,7 @@ import (
 
 	"github.com/arup3201/oauth2.0/db"
 	"github.com/arup3201/oauth2.0/models"
+	"github.com/arup3201/oauth2.0/utils"
 	"github.com/go-playground/validator/v10"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -27,6 +28,7 @@ const (
 	COOKIE_REFRESH_TOKEN_NAME = "refresh_token"
 	TYPE_AUTHENCATION_TOKEN   = "auth"
 	TYPE_REFRESH_TOKEN        = "refresh"
+	AUTHORIZATION_CODE_LENGTH = 10
 )
 
 func hashPassword(password []byte) ([]byte, error) {
@@ -430,4 +432,102 @@ func RequestAccess(w http.ResponseWriter, r *http.Request) {
 		respondInternalError(err)
 		return
 	}
+}
+
+func Authorize(w http.ResponseWriter, r *http.Request) {
+	errMessage := "Failed to request access"
+	respondInvalidQuery := func(err error) {
+		errorBody := models.InvalidQueryError(r.URL.Path, fmt.Errorf("error parsing request query values: %w", err))
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(models.HTTPResponse{
+			Status:  models.STATUS_ERROR,
+			Message: errMessage,
+			Error:   errorBody,
+		})
+		log.Printf("[ERROR] %s", errorBody)
+	}
+	respondClientNotFound := func() {
+		errorBody := models.ClientNotFound(r.URL.Path, fmt.Errorf("no client found with given clientID"))
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(models.HTTPResponse{
+			Status:  models.STATUS_ERROR,
+			Message: errMessage,
+			Error:   errorBody,
+		})
+		log.Printf("[ERROR] %s", errorBody)
+	}
+	respondInternalError := func(err error) {
+		errorBody := models.InternalServerError(r.URL.Path, fmt.Errorf("internal server error: %w", err))
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(models.HTTPResponse{
+			Status:  models.STATUS_ERROR,
+			Message: errMessage,
+			Error:   errorBody,
+		})
+		log.Printf("[ERROR] %s", errorBody)
+	}
+
+	queries := r.URL.Query()
+	responseType := queries.Get("response_type")
+	clientId := queries.Get("client_id")
+	redirectUri := queries.Get("redirect_uri")
+	scope := queries.Get("scope")
+	state := queries.Get("state")
+
+	if responseType == "" || clientId == "" || redirectUri == "" || scope == "" || state == "" {
+		respondInvalidQuery(fmt.Errorf("some of the required queries response_type, client_id, redirect_uri, scope or state are missing or malformed"))
+		return
+	}
+
+	// get mongodb client
+
+	client, err := db.GetMongoClient()
+	if err != nil {
+		respondInternalError(err)
+		return
+	}
+	defer db.DisconnectMongoClient(client)
+
+	// verify redirect URI
+
+	collection, err := db.GetMongoCollection(client, COLLECTION_CLIENTS)
+	if err != nil {
+		respondInternalError(err)
+		return
+	}
+
+	cursor, err := collection.Find(context.TODO(), bson.M{"_id": clientId})
+	if err != nil {
+		respondInternalError(err)
+		return
+	}
+
+	var clientObjs []models.Client
+	err = cursor.All(context.TODO(), &clientObjs)
+	if err != nil {
+		respondInternalError(err)
+		return
+	}
+
+	if len(clientObjs) < 1 {
+		respondClientNotFound()
+		return
+	}
+
+	if clientObjs[0].RedirectURI != redirectUri {
+		respondInvalidQuery(fmt.Errorf("request redirect_uri does not match client's registered redirect_uri"))
+	}
+
+	// generate authorization code
+
+	authorizationCode, err := utils.GenerateRandomKey(AUTHORIZATION_CODE_LENGTH)
+	if err != nil {
+		respondInternalError(fmt.Errorf("authorization code generate error: %w", err))
+		return
+	}
+
+	// HTTP Redirection with Authorization code
+
+	url := fmt.Sprintf("%s?code=%s&state=%s", redirectUri, authorizationCode, state)
+	http.Redirect(w, r, url, http.StatusSeeOther)
 }

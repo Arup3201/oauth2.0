@@ -2,9 +2,6 @@ package handlers
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -12,6 +9,7 @@ import (
 
 	"github.com/arup3201/oauth2.0/db"
 	"github.com/arup3201/oauth2.0/models"
+	"github.com/arup3201/oauth2.0/utils"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -22,20 +20,6 @@ const (
 	COLLECTION_CLIENTS       = "clients"
 	COLLECTION_CLIENT_SCOPES = "client_scopes"
 )
-
-func randomKeyGenerator(length int) (string, error) {
-	b := make([]byte, length)
-	if _, err := rand.Read(b); err != nil {
-		return "", fmt.Errorf("random key generate error: %w", err)
-	}
-
-	hasher := sha256.New()
-	if _, err := hasher.Write(b); err != nil {
-		return "", fmt.Errorf("random key hash error: %w", err)
-	}
-
-	return hex.EncodeToString(hasher.Sum(nil)), nil
-}
 
 func ClientRegister(w http.ResponseWriter, r *http.Request) {
 	respondPayloadError := func(err error) {
@@ -74,7 +58,7 @@ func ClientRegister(w http.ResponseWriter, r *http.Request) {
 	id := uuid.New()
 	clientId := id.String()
 
-	clientSecret, err := randomKeyGenerator(CLIENT_SECRET_LENGTH)
+	clientSecret, err := utils.GenerateRandomKey(CLIENT_SECRET_LENGTH)
 	if err != nil {
 		respondInternalError(fmt.Errorf("client secret generate error: %w", err))
 		return
