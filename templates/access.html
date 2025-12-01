@@ -194,12 +194,58 @@
     </main>
 
     <script>
-      document.getElementById("allowBtn").addEventListener("click", () => {
-        alert("Allowed (demo). Replace with redirect to authorization server.");
+      const allowBtn = document.getElementById("allowBtn");
+      const denyBtn = document.getElementById("denyBtn");
+      allowBtn.addEventListener("click", () => {
+        this.disabled = true;
+        this.textContent = "Allowing...";
+        denyBtn.disabled = true;
+        fetch("/auth" + window.location.search, {
+          method: "POST",
+          body: JSON.stringify({
+            grant: true,
+          }),
+        })
+          .then((response) => {
+            // HTTP 302 Redirect
+            if (response.redirected) {
+              window.location.href = response.url;
+            }
+          })
+          .catch((err) => {
+            console.log(err);
+          })
+          .finally(() => {
+            this.disabled = false;
+            this.textContent = "Allow";
+            denyBtn.disabled = false;
+          });
       });
 
-      document.getElementById("denyBtn").addEventListener("click", () => {
-        alert("Denied (demo). Redirect the user to your error/cancel URL.");
+      denyBtn.addEventListener("click", () => {
+        this.disabled = true;
+        this.textContent = "Denying...";
+        allowBtn.disabled = true;
+        fetch("/auth" + window.location.search, {
+          method: "POST",
+          body: JSON.stringify({
+            grant: false,
+          }),
+        })
+          .then((response) => {
+            // HTTP 302 Redirect
+            if (response.redirected) {
+              window.location.href = response.url;
+            }
+          })
+          .catch((err) => {
+            console.log(err);
+          })
+          .finally(() => {
+            this.disabled = false;
+            this.textContent = "Deny";
+            allowBtn.disabled = false;
+          });
       });
     </script>
   </body>

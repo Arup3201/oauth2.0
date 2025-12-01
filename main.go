@@ -55,7 +55,7 @@ func main() {
 
 	mux.HandleFunc("POST /register", handlers.Register)
 	mux.HandleFunc("POST /login", handlers.Login)
-	mux.HandleFunc("GET /auth", handlers.Authorize)
+	mux.HandleFunc("GET /auth", handlers.RequestAccess)
 
 	mux.HandleFunc("POST /clients", handlers.ClientRegister)
 	mux.HandleFunc("POST /clients/scopes", handlers.AddClientScopes)

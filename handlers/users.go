@@ -290,13 +290,14 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, authUrl, http.StatusSeeOther)
 }
 
-func Authorize(w http.ResponseWriter, r *http.Request) {
+func RequestAccess(w http.ResponseWriter, r *http.Request) {
+	errMessage := "Failed to request access"
 	respondInvalidQuery := func(err error) {
 		errorBody := models.InvalidQueryError(r.URL.Path, fmt.Errorf("error parsing request query values: %w", err))
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(models.HTTPResponse{
 			Status:  models.STATUS_ERROR,
-			Message: "Failed to athorize",
+			Message: errMessage,
 			Error:   errorBody,
 		})
 		log.Printf("[ERROR] %s", errorBody)
@@ -306,7 +307,7 @@ func Authorize(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(models.HTTPResponse{
 			Status:  models.STATUS_ERROR,
-			Message: "Failed to authorize",
+			Message: errMessage,
 			Error:   errorBody,
 		})
 		log.Printf("[ERROR] %s", errorBody)
@@ -316,7 +317,7 @@ func Authorize(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(models.HTTPResponse{
 			Status:  models.STATUS_ERROR,
-			Message: "Failed to authorize",
+			Message: errMessage,
 			Error:   errorBody,
 		})
 		log.Printf("[ERROR] %s", errorBody)
@@ -326,7 +327,7 @@ func Authorize(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(models.HTTPResponse{
 			Status:  models.STATUS_ERROR,
-			Message: "Failed to authorize",
+			Message: errMessage,
 			Error:   errorBody,
 		})
 		log.Printf("[ERROR] %s", errorBody)
@@ -424,7 +425,7 @@ func Authorize(w http.ResponseWriter, r *http.Request) {
 		ClientURL:  "http://example.com", // TODO: Client web origin URL
 		Scopes:     scopeDescriptions,
 	}
-	err = parseExecuteTemplate("templates/permissions.tmpl", w, &templateData)
+	err = parseExecuteTemplate("templates/access.tmpl", w, &templateData)
 	if err != nil {
 		respondInternalError(err)
 		return
