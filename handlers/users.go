@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -22,13 +21,15 @@ import (
 )
 
 const (
-	ENV_TOKEN_SECRET          = "TOKEN_SECRET"
 	COLLECTION_USERS          = "users"
 	COLLECTION_SCOPES         = "scopes"
 	COOKIE_REFRESH_TOKEN_NAME = "refresh_token"
 	TYPE_AUTHENCATION_TOKEN   = "auth"
 	TYPE_REFRESH_TOKEN        = "refresh"
-	AUTHORIZATION_CODE_LENGTH = 10
+	AUTHENTICATION_TOKEN_EXP  = 15 * time.Minute
+	AUTHORIZATION_CODE_EXP    = 10 * time.Minute
+	ACCESS_TOKEN_EXP          = 1 * time.Hour
+	REFRESH_TOKEN_EXP         = 24 * time.Hour
 )
 
 func hashPassword(password []byte) ([]byte, error) {
@@ -40,24 +41,48 @@ func hashPassword(password []byte) ([]byte, error) {
 	return hash, nil
 }
 
-func createToken(email string, tokenType string, exp time.Time) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256,
-		jwt.MapClaims{
-			"email": email,
-			"type":  tokenType,
-			"exp":   exp,
-		})
+func getJWTExp(duration time.Duration) int64 {
+	return time.Now().Add(duration).Unix()
+}
 
-	signSecret := os.Getenv(ENV_TOKEN_SECRET)
-	if signSecret == "" {
-		return "", fmt.Errorf("[ERROR] environment variable '%s' is missing", ENV_TOKEN_SECRET)
+func generateAuthenticationToken(userId, email string) (string, error) {
+	claims := jwt.MapClaims{
+		"sub":   userId,
+		"email": email,
+		"exp":   getJWTExp(AUTHENTICATION_TOKEN_EXP),
 	}
-	tokenString, err := token.SignedString([]byte(signSecret))
-	if err != nil {
-		return "", err
-	}
+	return utils.GetJWTString(claims)
+}
 
-	return tokenString, nil
+func generateAuthorizationCode(scopes, clientId string) (string, error) {
+	claims := jwt.MapClaims{
+		"scopes":    scopes,
+		"client_id": clientId,
+		"exp":       getJWTExp(AUTHORIZATION_CODE_EXP),
+	}
+	return utils.GetJWTString(claims)
+}
+
+func generateAccessToken(sub, email, clientId, scopes string) (string, error) {
+	claims := jwt.MapClaims{
+		"sub":       sub,
+		"email":     email,
+		"client_id": clientId,
+		"scopes":    scopes,
+		"type":      TYPE_AUTHENCATION_TOKEN,
+		"exp":       getJWTExp(ACCESS_TOKEN_EXP),
+	}
+	return utils.GetJWTString(claims)
+}
+
+func generateRefreshToken(sub, clientId string) (string, error) {
+	claims := jwt.MapClaims{
+		"sub":       sub,
+		"client_id": clientId,
+		"type":      TYPE_REFRESH_TOKEN,
+		"exp":       getJWTExp(ACCESS_TOKEN_EXP),
+	}
+	return utils.GetJWTString(claims)
 }
 
 func Register(w http.ResponseWriter, r *http.Request) {
@@ -283,12 +308,27 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	authenticationToken, err := generateAuthenticationToken(user.Id, user.Email)
+	if err != nil {
+		respondInternalError(fmt.Errorf("error generating authentication token: %w", err))
+		return
+	}
+
 	authUrl := `/auth?` +
 		`response_type=` + responseType +
 		`&client_id=` + clientId +
 		`&redirect_uri=` + redirectUri +
 		`&scope=` + scope +
 		`&state=` + state
+	authenticationCookie := &http.Cookie{
+		Name:     "authentication",
+		Value:    authenticationToken,
+		Path:     "/",
+		Expires:  time.Now().Add(15 * time.Minute),
+		HttpOnly: true,
+		Secure:   true,
+	}
+	http.SetCookie(w, authenticationCookie)
 	http.Redirect(w, r, authUrl, http.StatusSeeOther)
 }
 
@@ -516,11 +556,12 @@ func Authorize(w http.ResponseWriter, r *http.Request) {
 
 	if clientObjs[0].RedirectURI != redirectUri {
 		respondInvalidQuery(fmt.Errorf("request redirect_uri does not match client's registered redirect_uri"))
+		return
 	}
 
 	// generate authorization code
 
-	authorizationCode, err := utils.GenerateRandomKey(AUTHORIZATION_CODE_LENGTH)
+	authorizationCode, err := generateAuthorizationCode(scope, clientId)
 	if err != nil {
 		respondInternalError(fmt.Errorf("authorization code generate error: %w", err))
 		return
@@ -528,6 +569,148 @@ func Authorize(w http.ResponseWriter, r *http.Request) {
 
 	// HTTP Redirection with Authorization code
 
-	url := fmt.Sprintf("%s?code=%s&state=%s", redirectUri, authorizationCode, state)
-	http.Redirect(w, r, url, http.StatusSeeOther)
+	cookies := r.CookiesNamed("authentication")
+	if len(cookies) > 0 {
+		url := fmt.Sprintf("%s?code=%s&state=%s&auth=%s", redirectUri, authorizationCode, state, cookies[0].Value)
+		http.Redirect(w, r, url, http.StatusSeeOther)
+		return
+	}
+
+	respondInvalidQuery(fmt.Errorf("user authentication token not found"))
+}
+
+func GetToken(w http.ResponseWriter, r *http.Request) {
+	errMessage := "error generating token"
+	respondInvalidPayload := func(err error) {
+		errorBody := models.InvalidPayloadError(r.URL.Path, fmt.Errorf("error in decoding request payload: %w", err))
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(models.HTTPResponse{
+			Status:  models.STATUS_ERROR,
+			Message: errMessage,
+			Error:   errorBody,
+		})
+		log.Printf("[ERROR] %s", errorBody)
+	}
+	respondClientNotFound := func() {
+		errorBody := models.ClientNotFound(r.URL.Path, fmt.Errorf("no client found with given clientID"))
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(models.HTTPResponse{
+			Status:  models.STATUS_ERROR,
+			Message: errMessage,
+			Error:   errorBody,
+		})
+		log.Printf("[ERROR] %s", errorBody)
+	}
+	respondInternalError := func(err error) {
+		errorBody := models.InternalServerError(r.URL.Path, fmt.Errorf("internal server error: %w", err))
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(models.HTTPResponse{
+			Status:  models.STATUS_ERROR,
+			Message: errMessage,
+			Error:   errorBody,
+		})
+		log.Printf("[ERROR] %s", errorBody)
+	}
+
+	var request struct {
+		GrantType         string `json:"grant_type" validate:"required"`
+		AuthorizationCode string `json:"code" validate:"required"`
+		ClientID          string `json:"client_id" validate:"required"`
+		ClientSecret      string `json:"client_secret" validate:"required"`
+		RedirectURI       string `json:"redirect_uri" validate:"required"`
+		AuthToken         string `json:"auth" validate:"required"`
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&request); err != nil {
+		respondInvalidPayload(fmt.Errorf("error decoding request: %w", err))
+		return
+	}
+	if err := validator.New().Struct(request); err != nil {
+		respondInvalidPayload(fmt.Errorf("error validating request body: %w", err))
+		return
+	}
+
+	// get mongodb client
+
+	client, err := db.GetMongoClient()
+	if err != nil {
+		respondInternalError(err)
+		return
+	}
+	defer db.DisconnectMongoClient(client)
+
+	// verify redirect URI
+
+	collection, err := db.GetMongoCollection(client, COLLECTION_CLIENTS)
+	if err != nil {
+		respondInternalError(err)
+		return
+	}
+
+	cursor, err := collection.Find(context.TODO(), bson.M{"_id": request.ClientID})
+	if err != nil {
+		respondInternalError(err)
+		return
+	}
+
+	var clientObjs []models.Client
+	err = cursor.All(context.TODO(), &clientObjs)
+	if err != nil {
+		respondInternalError(err)
+		return
+	}
+
+	if len(clientObjs) < 1 {
+		respondClientNotFound()
+		return
+	}
+
+	if clientObjs[0].ClientSecret != request.ClientSecret {
+		respondInvalidPayload(fmt.Errorf("client credentials are wrong"))
+		return
+	}
+
+	if clientObjs[0].RedirectURI != request.RedirectURI {
+		respondInvalidPayload(fmt.Errorf("request redirect_uri does not match client's registered redirect_uri"))
+		return
+	}
+
+	// access token and refresh token
+
+	payload, err := utils.VerifyJWT(request.AuthToken)
+	if err != nil {
+		respondInvalidPayload(fmt.Errorf("user authentication token not valid: %w", err))
+		return
+	}
+	claims := payload.Claims.(jwt.MapClaims)
+	userId, email := claims["sub"].(string), claims["email"].(string)
+	payload, err = utils.VerifyJWT(request.AuthorizationCode)
+	if err != nil {
+		respondInvalidPayload(fmt.Errorf("user authorization code not valid"))
+		return
+	}
+	claims = payload.Claims.(jwt.MapClaims)
+	scopes := claims["scopes"].(string)
+	accessToken, err := generateAccessToken(userId, email, request.ClientID, scopes)
+	if err != nil {
+		respondInternalError(err)
+		return
+	}
+	refreshToken, err := generateRefreshToken(userId, request.ClientID)
+	if err != nil {
+		respondInternalError(err)
+		return
+	}
+
+	json.NewEncoder(w).Encode(models.HTTPResponse{
+		Status:  models.STATUS_SUCCESS,
+		Message: "Access token recieved",
+		Data: map[string]any{
+			"access_token":  accessToken,
+			"refresh_token": refreshToken,
+			"expires_in":    ACCESS_TOKEN_EXP.Seconds(),
+		},
+	})
 }
