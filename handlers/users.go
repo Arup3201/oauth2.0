@@ -709,6 +709,7 @@ func GetToken(w http.ResponseWriter, r *http.Request) {
 		Message: "Access token recieved",
 		Data: map[string]any{
 			"access_token":  accessToken,
+			"token_type":    "Bearer",
 			"refresh_token": refreshToken,
 			"expires_in":    ACCESS_TOKEN_EXP.Seconds(),
 		},
